@@ -6,6 +6,9 @@
 .cache
 dist
 
+# SQLite 数据（运行时挂载，不入库）
+data
+
 # Node dependencies
 node_modules
 

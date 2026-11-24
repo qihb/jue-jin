@@ -1,6 +1,6 @@
 import type { ApiResp, CreatorOverview } from '~~/shared/types'
 import { MOCK_BASE_TIME } from '~~/shared/constants'
-import { db } from '~~/server/mock/seed'
+import { getUserById, listArticlesByAuthor } from '~~/server/db'
 import { ok } from '~~/server/utils/resp'
 
 /** 近 7 日趋势天数 */
@@ -21,21 +21,25 @@ function deriveTrend(total: number, seed: number): number {
 
 /**
  * 创作者中心 · 数据概览。
- * 阶段 7 占位当前用户（取首个 mock 用户），阶段 5 改为按 token 解析。
+ * 当前用户取自登录态（event.context.user），未登录时返回空概览。
  */
-export default defineEventHandler((): ApiResp<CreatorOverview> => {
-  const [current] = db.users
-  const articles = current ? db.articles.filter((item) => item.author.id === current.id) : []
+export default defineEventHandler((event): ApiResp<CreatorOverview> => {
+  const user = event.context.user as { id: string } | null
+  const current = user ? getUserById(user.id) : null
 
   let totalView = 0
   let totalLike = 0
   let totalCollect = 0
   let totalComment = 0
-  for (const article of articles) {
-    totalView += article.viewCount
-    totalLike += article.likeCount
-    totalCollect += article.collectCount
-    totalComment += article.commentCount
+
+  if (current) {
+    const page = listArticlesByAuthor(current.id, { limit: 1000, cursor: '' }, null)
+    for (const article of page.list) {
+      totalView += article.viewCount
+      totalLike += article.likeCount
+      totalCollect += article.collectCount
+      totalComment += article.commentCount
+    }
   }
 
   const daily = Math.round(totalView / TREND_DAYS)

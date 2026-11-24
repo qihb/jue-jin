@@ -1,16 +1,14 @@
 import type { ApiResp, UserBrief } from '~~/shared/types'
-import { db, toUserBrief } from '~~/server/mock/seed'
 import { fail, ok } from '~~/server/utils/resp'
 
 /**
- * 当前登录用户。
- * 阶段 4 为占位实现：固定返回 mock 库中的首个用户，供登录拦截与交互演示使用；
- * 阶段 5 接入登录体系后改为按 token 解析真实用户。
+ * 当前登录用户：从 JWT 中间件解析的 event.context.user 读取。
+ * 未登录返回 401，由前端唤起登录弹窗。
  */
-export default defineEventHandler((): ApiResp<UserBrief> => {
-  const [user] = db.users
+export default defineEventHandler((event): ApiResp<UserBrief> => {
+  const user = event.context.user as UserBrief | null
   if (!user) {
-    return fail('用户不存在', 404)
+    return fail('未登录', 401)
   }
-  return ok(toUserBrief(user))
+  return ok(user)
 })

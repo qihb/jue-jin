@@ -1,5 +1,5 @@
 import type { ApiResp } from '~~/shared/types'
-import { db } from '~~/server/mock/seed'
+import { toggleArticleLike } from '~~/server/db'
 import { fail, ok } from '~~/server/utils/resp'
 
 /** 点赞结果 */
@@ -8,15 +8,19 @@ export interface ArticleLikeResult {
   likeCount: number
 }
 
-/** 文章点赞 / 取消点赞：mock 直接改内存态，返回最新结果 */
+/** 文章点赞 / 取消点赞（需登录） */
 export default defineEventHandler(async (event): Promise<ApiResp<ArticleLikeResult>> => {
-  const body = await readBody<{ id?: string } | undefined>(event)
-  const article = db.articles.find((item) => item.id === body?.id)
-  if (!article) {
-    return fail('文章不存在', 404)
+  const user = event.context.user as { id: string } | null
+  if (!user) {
+    return fail('请先登录', 401)
   }
 
-  article.liked = !article.liked
-  article.likeCount = Math.max(0, article.likeCount + (article.liked ? 1 : -1))
-  return ok({ liked: article.liked, likeCount: article.likeCount })
+  const body = await readBody<{ id?: string } | undefined>(event)
+  const articleId = body?.id
+  if (!articleId) {
+    return fail('文章 id 不能为空', 400)
+  }
+
+  const result = toggleArticleLike(articleId, user.id)
+  return ok(result)
 })

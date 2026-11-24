@@ -1,16 +1,20 @@
 import type { ApiResp, PinLikeResult } from '~~/shared/types'
-import { db } from '~~/server/mock/seed'
+import { togglePinLike } from '~~/server/db'
 import { fail, ok } from '~~/server/utils/resp'
 
-/** 沸点点赞 / 取消点赞：mock 直接改内存态，返回最新结果 */
+/** 沸点点赞 / 取消点赞（需登录） */
 export default defineEventHandler(async (event): Promise<ApiResp<PinLikeResult>> => {
-  const body = await readBody<{ id?: string } | undefined>(event)
-  const pin = db.pins.find((item) => item.id === body?.id)
-  if (!pin) {
-    return fail('沸点不存在', 404)
+  const user = event.context.user as { id: string } | null
+  if (!user) {
+    return fail('请先登录', 401)
   }
 
-  pin.liked = !pin.liked
-  pin.likeCount = Math.max(0, pin.likeCount + (pin.liked ? 1 : -1))
-  return ok({ liked: pin.liked, likeCount: pin.likeCount })
+  const body = await readBody<{ id?: string } | undefined>(event)
+  const pinId = body?.id
+  if (!pinId) {
+    return fail('沸点 id 不能为空', 400)
+  }
+
+  const result = togglePinLike(pinId, user.id)
+  return ok(result)
 })

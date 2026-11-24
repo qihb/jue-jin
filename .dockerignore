@@ -6,6 +6,7 @@ node_modules
 .data
 .cache
 dist
+data
 
 # 日志
 logs

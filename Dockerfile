@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1
 
 # ===== 构建阶段 =====
-# 用 alpine 镜像（musl libc），不受宿主 CentOS 7 的 glibc 2.17 限制
-FROM node:22-alpine AS builder
+# alpine（musl libc）镜像体积小，项目无原生依赖，可安全使用
+FROM node:24-alpine AS builder
 
 WORKDIR /app
 
@@ -22,13 +22,16 @@ COPY . .
 RUN pnpm build
 
 # ===== 运行阶段 =====
-FROM node:22-alpine AS runner
+FROM node:24-alpine AS runner
 
 WORKDIR /app
 
 ENV NODE_ENV=production \
     NITRO_PORT=3000 \
     HOST=0.0.0.0
+
+# SQLite 数据目录（由 compose volume 挂载到宿主机，持久化）
+RUN mkdir -p /app/data
 
 # 只拷贝构建产物，镜像体积最小
 COPY --from=builder /app/.output ./.output

@@ -3,7 +3,6 @@ import type {
   ArticleSummary,
   AuthorRankItem,
   Comment,
-  CommentTargetType,
   ID,
   PinDetail,
   Tag,
@@ -39,16 +38,14 @@ function createRng(seed: number): Rng {
   }
 }
 
-const rng = createRng(RANDOM_SEED)
-
 /** 取 [min, max] 闭区间整数 */
-function int(min: number, max: number): number {
+function int(rng: Rng, min: number, max: number): number {
   return min + Math.floor(rng() * (max - min + 1))
 }
 
 /** 从数据池中确定性取一项（仅用于非空池） */
-function pick<T>(list: readonly T[]): T {
-  const item = list[int(0, list.length - 1)]
+function pick<T>(rng: Rng, list: readonly T[]): T {
+  const item = list[int(rng, 0, list.length - 1)]
   if (item === undefined) {
     throw new Error('pick(): 数据池不能为空')
   }
@@ -250,35 +247,35 @@ export function toUserBrief(user: User): UserBrief {
   return { id, username, nickname, avatar, level, description }
 }
 
-function generateUsers(count: number): User[] {
+function generateUsers(rng: Rng, count: number): User[] {
   const users: User[] = []
   for (let index = 0; index < count; index += 1) {
     const seq = index + 1
     users.push({
       id: `user_${seq}`,
       username: `juejin_${seq}`,
-      nickname: `${pick(NICKNAME_PREFIX)}${pick(NICKNAME_CORE)}${pick(NICKNAME_SUFFIX)}`,
+      nickname: `${pick(rng, NICKNAME_PREFIX)}${pick(rng, NICKNAME_CORE)}${pick(rng, NICKNAME_SUFFIX)}`,
       avatar: imageUrl(`扁平矢量技术风格开发者头像，配色方案 ${seq}`, 'square'),
-      level: int(1, 8),
-      description: pick(USER_DESCRIPTIONS),
+      level: int(rng, 1, 8),
+      description: pick(rng, USER_DESCRIPTIONS),
       email: `juejin_${seq}@example.com`,
-      job: pick(JOBS),
-      company: pick(COMPANIES),
-      power: int(200, 20000),
-      followCount: int(5, 300),
-      followerCount: int(10, 5000),
-      likedCount: int(20, 30000),
+      job: pick(rng, JOBS),
+      company: pick(rng, COMPANIES),
+      power: int(rng, 200, 20000),
+      followCount: int(rng, 5, 300),
+      followerCount: int(rng, 10, 5000),
+      likedCount: int(rng, 20, 30000),
       articleCount: 0,
-      createdAt: isoTime(-(seq * 1440 + int(0, 1440))),
+      createdAt: isoTime(-(seq * 1440 + int(rng, 0, 1440))),
     })
   }
   return users
 }
 
-function buildContent(title: string, topic: string): string {
-  const first = pick(ARTICLE_PARAGRAPHS)
-  const second = pick(ARTICLE_PARAGRAPHS)
-  const third = pick(ARTICLE_PARAGRAPHS)
+function buildContent(rng: Rng, title: string, topic: string): string {
+  const first = pick(rng, ARTICLE_PARAGRAPHS)
+  const second = pick(rng, ARTICLE_PARAGRAPHS)
+  const third = pick(rng, ARTICLE_PARAGRAPHS)
   return [
     `# ${title}`,
     '',
@@ -303,18 +300,18 @@ function buildContent(title: string, topic: string): string {
   ].join('\n')
 }
 
-function generateArticles(count: number, users: User[]): ArticleDetail[] {
+function generateArticles(rng: Rng, count: number, users: User[]): ArticleDetail[] {
   const articles: ArticleDetail[] = []
   for (let index = 0; index < count; index += 1) {
     const seq = index + 1
-    const topic = pick(ARTICLE_TOPICS)
-    const title = pick(ARTICLE_TITLE_TEMPLATES).replace('{topic}', topic)
+    const topic = pick(rng, ARTICLE_TOPICS)
+    const title = pick(rng, ARTICLE_TITLE_TEMPLATES).replace('{topic}', topic)
 
     const topicTag = TAG_SEEDS.find((tag) => tag.name === topic)
-    const categoryId = topicTag ? topicTag.categoryId : pick(CONTENT_CATEGORIES).id
+    const categoryId = topicTag ? topicTag.categoryId : pick(rng, CONTENT_CATEGORIES).id
     const sameCategory = TAG_SEEDS.filter((tag) => tag.categoryId === categoryId)
-    const primaryTag = pick(sameCategory.length > 0 ? sameCategory : TAG_SEEDS).name
-    const secondaryTag = pick(TAG_SEEDS).name
+    const primaryTag = pick(rng, sameCategory.length > 0 ? sameCategory : TAG_SEEDS).name
+    const secondaryTag = pick(rng, TAG_SEEDS).name
     const tags = primaryTag === secondaryTag ? [primaryTag] : [primaryTag, secondaryTag]
 
     const hasCover = rng() < 0.5
@@ -322,48 +319,50 @@ function generateArticles(count: number, users: User[]): ArticleDetail[] {
     articles.push({
       id: `article_${seq}`,
       title,
-      brief: pick(ARTICLE_BRIEFS),
+      brief: pick(rng, ARTICLE_BRIEFS),
       cover: hasCover
         ? imageUrl(`${topic} 技术文章封面插画，蓝色科技感，编号 ${seq}`, 'landscape_4_3')
         : '',
       categoryId,
       tags,
-      author: toUserBrief(pick(users)),
-      viewCount: int(100, 50000),
-      likeCount: int(5, 1200),
+      author: toUserBrief(pick(rng, users)),
+      viewCount: int(rng, 100, 50000),
+      likeCount: int(rng, 5, 1200),
       commentCount: 0,
-      collectCount: int(1, 800),
-      createdAt: isoTime(-(index * 137 + int(0, 120))),
+      collectCount: int(rng, 1, 800),
+      createdAt: isoTime(-(index * 137 + int(rng, 0, 120))),
       isHot: rng() < 0.2,
-      content: buildContent(title, topic),
-      liked: rng() < 0.3,
-      collected: rng() < 0.2,
+      content: buildContent(rng, title, topic),
+      // liked / collected 为「当前登录用户」的交互态，持久化层按用户关系表计算，种子不预设
+      liked: false,
+      collected: false,
     })
   }
   return articles
 }
 
-function generatePins(count: number, users: User[]): PinDetail[] {
+function generatePins(rng: Rng, count: number, users: User[]): PinDetail[] {
   const pins: PinDetail[] = []
   for (let index = 0; index < count; index += 1) {
     const seq = index + 1
     const hasImage = rng() < 0.4
     pins.push({
       id: `pin_${seq}`,
-      content: pick(PIN_CONTENTS),
+      content: pick(rng, PIN_CONTENTS),
       images: hasImage ? [imageUrl(`开发者日常配图，简洁风格，编号 ${seq}`, 'landscape_4_3')] : [],
-      topics: [pick(TAG_NAMES)],
-      author: toUserBrief(pick(users)),
-      likeCount: int(0, 500),
+      topics: [pick(rng, TAG_NAMES)],
+      author: toUserBrief(pick(rng, users)),
+      likeCount: int(rng, 0, 500),
       commentCount: 0,
-      createdAt: isoTime(-(index * 91 + int(0, 60))),
-      liked: rng() < 0.25,
+      createdAt: isoTime(-(index * 91 + int(rng, 0, 60))),
+      liked: false,
     })
   }
   return pins
 }
 
 function generateComments(
+  rng: Rng,
   count: number,
   users: User[],
   articles: ArticleDetail[],
@@ -373,22 +372,22 @@ function generateComments(
   for (let index = 0; index < count; index += 1) {
     const seq = index + 1
     const onArticle = rng() < 0.7
-    const targetType: CommentTargetType = onArticle ? 'article' : 'pin'
-    const targetId: ID = onArticle ? pick(articles).id : pick(pins).id
-    const author = pick(users)
+    const targetType = onArticle ? 'article' : 'pin'
+    const targetId: ID = onArticle ? pick(rng, articles).id : pick(rng, pins).id
+    const author = pick(rng, users)
 
     const children: Comment[] = []
-    const replyCount = rng() < 0.35 ? int(1, 2) : 0
+    const replyCount = rng() < 0.35 ? int(rng, 1, 2) : 0
     for (let reply = 0; reply < replyCount; reply += 1) {
       children.push({
         id: `comment_${seq}_${reply + 1}`,
         targetType,
         targetId,
-        content: pick(REPLY_TEXTS),
-        author: toUserBrief(pick(users)),
+        content: pick(rng, REPLY_TEXTS),
+        author: toUserBrief(pick(rng, users)),
         replyTo: `comment_${seq}`,
         replyToName: author.nickname,
-        likeCount: int(0, 50),
+        likeCount: int(rng, 0, 50),
         liked: false,
         createdAt: isoTime(-(index * 37 + reply + 1)),
         children: [],
@@ -399,20 +398,20 @@ function generateComments(
       id: `comment_${seq}`,
       targetType,
       targetId,
-      content: pick(COMMENT_TEXTS),
+      content: pick(rng, COMMENT_TEXTS),
       author: toUserBrief(author),
       replyTo: null,
       replyToName: '',
-      likeCount: int(0, 200),
-      liked: rng() < 0.2,
-      createdAt: isoTime(-(index * 37 + int(0, 36))),
+      likeCount: int(rng, 0, 200),
+      liked: false,
+      createdAt: isoTime(-(index * 37 + int(rng, 0, 36))),
       children,
     })
   }
   return comments
 }
 
-function generateTags(articles: ArticleDetail[]): Tag[] {
+function generateTags(rng: Rng, articles: ArticleDetail[]): Tag[] {
   return TAG_SEEDS.map((seed, index) => ({
     id: `tag_${index + 1}`,
     name: seed.name,
@@ -420,11 +419,12 @@ function generateTags(articles: ArticleDetail[]): Tag[] {
     categoryId: seed.categoryId,
     description: `${seed.name} 相关的技术文章与讨论`,
     articleCount: articles.filter((article) => article.tags.includes(seed.name)).length,
-    followerCount: int(100, 20000),
+    followerCount: int(rng, 100, 20000),
   }))
 }
 
 function generateAuthorRank(users: User[]): AuthorRankItem[] {
+  const rng = createRng(RANDOM_SEED + 999)
   return users
     .toSorted((a, b) => b.power - a.power)
     .slice(0, 10)
@@ -432,44 +432,14 @@ function generateAuthorRank(users: User[]): AuthorRankItem[] {
       rank: index + 1,
       user: toUserBrief(user),
       power: user.power,
-      trend: int(0, 500),
+      trend: int(rng, 0, 500),
     }))
 }
 
 /* ============================== 组装 ============================== */
 
-const users = generateUsers(USER_COUNT)
-const articles = generateArticles(ARTICLE_COUNT, users)
-const pins = generatePins(PIN_COUNT, users)
-const comments = generateComments(COMMENT_COUNT, users, articles, pins)
-const tags = generateTags(articles)
-const authorRank = generateAuthorRank(users)
-
-// 回填统计字段：作者发文数、内容评论数
-for (const article of articles) {
-  const author = users.find((user) => user.id === article.author.id)
-  if (author) {
-    author.articleCount += 1
-  }
-}
-
-const commentCountByTarget = new Map<ID, number>()
-for (const comment of comments) {
-  const total = 1 + comment.children.length
-  commentCountByTarget.set(
-    comment.targetId,
-    (commentCountByTarget.get(comment.targetId) ?? 0) + total,
-  )
-}
-for (const article of articles) {
-  article.commentCount = commentCountByTarget.get(article.id) ?? 0
-}
-for (const pin of pins) {
-  pin.commentCount = commentCountByTarget.get(pin.id) ?? 0
-}
-
-/** mock 数据库：整站接口的唯一数据来源 */
-export interface MockDatabase {
+/** mock 数据生成结果（供 SQLite 持久化层灌入） */
+export interface MockData {
   users: User[]
   articles: ArticleDetail[]
   pins: PinDetail[]
@@ -478,7 +448,44 @@ export interface MockDatabase {
   authorRank: AuthorRankItem[]
 }
 
-export const db: MockDatabase = { users, articles, pins, comments, tags, authorRank }
+/**
+ * 生成确定性 mock 数据。
+ * 每次调用结果完全一致（固定随机种子），保证 SSR 与 CSR 渲染一致。
+ */
+export function generateMockData(): MockData {
+  const rng = createRng(RANDOM_SEED)
+
+  const users = generateUsers(rng, USER_COUNT)
+  const articles = generateArticles(rng, ARTICLE_COUNT, users)
+  const pins = generatePins(rng, PIN_COUNT, users)
+  const comments = generateComments(rng, COMMENT_COUNT, users, articles, pins)
+  const tags = generateTags(rng, articles)
+
+  // 回填统计字段：作者发文数、内容评论数
+  for (const article of articles) {
+    const author = users.find((user) => user.id === article.author.id)
+    if (author) author.articleCount += 1
+  }
+
+  const commentCountByTarget = new Map<ID, number>()
+  for (const comment of comments) {
+    const total = 1 + comment.children.length
+    commentCountByTarget.set(
+      comment.targetId,
+      (commentCountByTarget.get(comment.targetId) ?? 0) + total,
+    )
+  }
+  for (const article of articles) {
+    article.commentCount = commentCountByTarget.get(article.id) ?? 0
+  }
+  for (const pin of pins) {
+    pin.commentCount = commentCountByTarget.get(pin.id) ?? 0
+  }
+
+  const authorRank = generateAuthorRank(users)
+
+  return { users, articles, pins, comments, tags, authorRank }
+}
 
 /** 文章详情 → 列表项（剥离正文与登录态） */
 export function toArticleSummary(article: ArticleDetail): ArticleSummary {
