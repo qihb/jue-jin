@@ -2,6 +2,8 @@ import type {
   ArticleDetail,
   ArticleSummary,
   AuthorRankItem,
+  BookDetail,
+  BookSection,
   Comment,
   ID,
   PinDetail,
@@ -24,7 +26,7 @@ const PIN_COUNT = 60
 const COMMENT_COUNT = 200
 
 type Rng = () => number
-type ImageSize = 'square' | 'landscape_4_3'
+type ImageSize = 'square' | 'landscape_4_3' | 'portrait_4_3'
 
 /** mulberry32：轻量确定性伪随机数发生器 */
 function createRng(seed: number): Rng {
@@ -240,6 +242,101 @@ const TAG_SEEDS: readonly { name: string; icon: string; categoryId: string }[] =
 
 const TAG_NAMES: readonly string[] = TAG_SEEDS.map((tag) => tag.name)
 
+/** 小册种子：title 作为小册名，tags 复用 TAG_SEEDS 中的标签名（便于跳转标签页） */
+const BOOK_SEEDS: readonly {
+  title: string
+  description: string
+  tags: string[]
+  /** 价格（单位：分），0 表示免费 */
+  price: number
+  finished: boolean
+}[] = [
+  {
+    title: 'Vue 3 实战：从组件到工程化',
+    description: '带你从基础组件一路走到大型项目工程化，覆盖组合式 API、状态管理与性能优化。',
+    tags: ['Vue 3', '前端'],
+    price: 2990,
+    finished: true,
+  },
+  {
+    title: 'React 进阶：Hooks 与状态管理',
+    description: '系统梳理 Hooks 的心智模型，讲清状态管理选型与常见的性能陷阱。',
+    tags: ['React'],
+    price: 3490,
+    finished: true,
+  },
+  {
+    title: 'TypeScript 类型体操入门',
+    description: '从泛型到条件类型，用真实业务场景练出扎实的类型设计能力。',
+    tags: ['TypeScript'],
+    price: 3990,
+    finished: false,
+  },
+  {
+    title: 'Node.js 服务端开发实战',
+    description: '基于 Node.js 构建可维护的服务端应用，含鉴权、缓存与部署实践。',
+    tags: ['Node.js'],
+    price: 4590,
+    finished: true,
+  },
+  {
+    title: '深入 MySQL：索引与事务',
+    description: '从 B+ 树到 MVCC，弄懂索引与事务背后的原理，写出更快的 SQL。',
+    tags: ['MySQL'],
+    price: 0,
+    finished: true,
+  },
+  {
+    title: 'Redis 实战：缓存与分布式锁',
+    description: '缓存穿透、雪崩、击穿以及分布式锁的落地实现与踩坑总结。',
+    tags: ['Redis'],
+    price: 2590,
+    finished: true,
+  },
+  {
+    title: 'Kubernetes 入门到实践',
+    description: '从最小可用集群到生产级部署，逐步掌握 K8s 的核心对象与运维技巧。',
+    tags: ['Kubernetes', 'Docker'],
+    price: 5990,
+    finished: false,
+  },
+  {
+    title: '大模型应用开发指南',
+    description: '围绕 Prompt 工程、RAG 与 Agent，给出可落地的大模型应用架构方案。',
+    tags: ['大模型'],
+    price: 6990,
+    finished: false,
+  },
+  {
+    title: '前端性能优化实战',
+    description: '从首屏加载到运行时流畅度，用真实数据驱动一次完整的性能优化。',
+    tags: ['Vite', '前端'],
+    price: 3290,
+    finished: true,
+  },
+  {
+    title: '算法与数据结构精讲',
+    description: '用面试高频题串起常用数据结构与算法思想，构建解题的通用套路。',
+    tags: ['算法'],
+    price: 0,
+    finished: true,
+  },
+]
+
+/** 章节标题池（按序号循环取用） */
+const BOOK_CHAPTER_TOPICS = [
+  '基础概念与前置准备',
+  '环境搭建与最小示例',
+  '核心原理剖析',
+  '实战演练',
+  '常见问题与排查',
+  '性能优化实践',
+  '源码阅读笔记',
+  '工程化与协作',
+  '部署上线',
+  '总结与展望',
+] as const
+
 /* ============================== 生成器 ============================== */
 
 export function toUserBrief(user: User): UserBrief {
@@ -423,6 +520,35 @@ function generateTags(rng: Rng, articles: ArticleDetail[]): Tag[] {
   }))
 }
 
+function generateBooks(rng: Rng, users: User[]): BookDetail[] {
+  return BOOK_SEEDS.map((seed, index) => {
+    const id = `book_${index + 1}`
+    const sectionCount = int(rng, 8, 16)
+    const sections: BookSection[] = Array.from({ length: sectionCount }, (_, chapter) => ({
+      id: `${id}_s${chapter + 1}`,
+      title: `第 ${chapter + 1} 章 ${BOOK_CHAPTER_TOPICS[chapter % BOOK_CHAPTER_TOPICS.length] ?? '实战'}`,
+      free: chapter < 3,
+      viewCount: int(rng, 100, 20000),
+    }))
+
+    return {
+      id,
+      title: seed.title,
+      cover: imageUrl(`${seed.title} 技术小册封面，扁平插画风，编号 ${index + 1}`, 'portrait_4_3'),
+      description: seed.description,
+      author: toUserBrief(pick(rng, users)),
+      tags: seed.tags,
+      price: seed.price,
+      finished: seed.finished,
+      sectionCount,
+      learnerCount: int(rng, 200, 80000),
+      collectCount: int(rng, 100, 30000),
+      createdAt: isoTime(-(index * 2880 + int(rng, 0, 1440))),
+      sections,
+    }
+  })
+}
+
 function generateAuthorRank(users: User[]): AuthorRankItem[] {
   const rng = createRng(RANDOM_SEED + 999)
   return users
@@ -445,6 +571,7 @@ export interface MockData {
   pins: PinDetail[]
   comments: Comment[]
   tags: Tag[]
+  books: BookDetail[]
   authorRank: AuthorRankItem[]
 }
 
@@ -460,6 +587,7 @@ export function generateMockData(): MockData {
   const pins = generatePins(rng, PIN_COUNT, users)
   const comments = generateComments(rng, COMMENT_COUNT, users, articles, pins)
   const tags = generateTags(rng, articles)
+  const books = generateBooks(rng, users)
 
   // 回填统计字段：作者发文数、内容评论数
   for (const article of articles) {
@@ -484,7 +612,7 @@ export function generateMockData(): MockData {
 
   const authorRank = generateAuthorRank(users)
 
-  return { users, articles, pins, comments, tags, authorRank }
+  return { users, articles, pins, comments, tags, books, authorRank }
 }
 
 /** 文章详情 → 列表项（剥离正文与登录态） */

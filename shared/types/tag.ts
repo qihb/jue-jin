@@ -1,4 +1,5 @@
-import type { ID } from './common'
+import type { ArticleSummary } from './article'
+import type { CursorPage, ID } from './common'
 
 /** 内容分类（首页 Tab） */
 export interface Category {
@@ -21,4 +22,10 @@ export interface Tag {
   articleCount: number
   /** 关注人数 */
   followerCount: number
+}
+
+/** 标签详情：标签信息 + 标签下的文章流（游标分页） */
+export interface TagDetail {
+  tag: Tag
+  articles: CursorPage<ArticleSummary>
 }

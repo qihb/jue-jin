@@ -23,6 +23,12 @@ export function formatCount(value: number): string {
   return `${Number((value / 10_000).toFixed(1))}万`
 }
 
+/** 价格：分 → `¥xx.xx`，0 分展示为「免费」 */
+export function formatPrice(cents: number): string {
+  if (cents <= 0) return '免费'
+  return `¥${(cents / 100).toFixed(2)}`
+}
+
 /** 绝对时间：`MM-DD HH:mm`（本地时区，用于本地草稿等以真实时间为准的场景） */
 export function formatDateTime(iso: string): string {
   const date = new Date(iso)

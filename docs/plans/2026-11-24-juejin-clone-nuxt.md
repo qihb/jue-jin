@@ -229,10 +229,10 @@ juejin/
 
 ### 阶段 8 · 搜索 / 标签 / 排行榜 / 小册
 
-- [ ] 8.1 全局搜索（防抖 + 分类结果）
-- [ ] 8.2 标签页 `/tag/[tag]`
-- [ ] 8.3 排行榜页
-- [ ] 8.4 小册列表与详情
+- [x] 8.1 全局搜索（防抖 + 分类结果）
+- [x] 8.2 标签页 `/tag/[tag]`
+- [x] 8.3 排行榜页
+- [x] 8.4 小册列表与详情
 
 ### 阶段 9 · 消息中心 / 收藏集
 
@@ -289,7 +289,7 @@ juejin/
 - **环境事件（需知悉）**：`vite-plus` 于本次自动把 pnpm 由 `10.33.0` 升到 `12.23.0`，触发"store 不一致 → 重建 node_modules"并撞上 pnpm 12 默认的 `minimumReleaseAge`（24h）供应链策略，导致 `node_modules` 一度被清空。已通过 `packageManager: pnpm@10.33.0` 固定版本并用 `pnpm install --frozen-lockfile` 恢复，锁文件未改动。
 - **已知取舍（用户决定）**：暂不安装 `@iconify-json/lucide`，图标在浏览器端向 Iconify 在线 API 拉取（需联网；SSR HTML 中不含图标 SVG）。后续若需离线/首屏图标，再补该 devDependency。
 - 备注：`agent.md` 采用社区通用大写命名 `AGENTS.md`（macOS 文件系统不区分大小写）。
-- 待办：阶段 5（用户体系）已由用户决定**暂缓**；阶段 6 剩余 6.3 依赖登录同样暂缓；后续模块均**待用户指定步骤后执行**。
+- 待办：阶段 5（用户体系）已由用户决定**暂缓**；阶段 6 剩余 6.3 依赖登录同样暂缓；阶段 8 已完成，剩余阶段 9（消息中心 / 收藏集）、阶段 10（收尾）**待用户指定步骤后执行**。
 - **阶段 7 已完成（7.0 ~ 7.5）**，验证结论：
   - 交付（编辑器）：依赖引入 `bytemd` / `@bytemd/vue-next` / `@bytemd/plugin-gfm` / `@bytemd/plugin-highlight` 并在 `AGENTS.md` 备案；`nuxt.config.ts` 引入 `bytemd/dist/index.css`，`main.css` 新增 `@layer components` 主题适配（`.jj-editor .bytemd` 高度/描边/暗色反相）
   - 交付（前端）：`layouts/editor.vue`（精简顶栏 + 全屏无侧栏）、`pages/editor/index.vue`、`pages/editor/drafts.vue`、`pages/editor/draft/[id].vue`、`pages/creator/index.vue`；组件 `editor/Workspace.vue`（ByteMD `<ClientOnly>` + gfm/highlight + 内联中文 locale + 双栏预览）、`editor/TitleBar.vue`（标题/字数/存草稿/发布）、`editor/PublishPanel.vue`（分类/标签/封面/摘要）、`editor/Form.vue`（组合入口 + 发布设置弹窗 + 演示登录弹窗）、`editor/DraftList.vue`（草稿箱与创作中心共用）、`creator/CreatorOverview.vue`（4 张统计卡 + 近 7 日阅读量柱状图）、`creator/CreatorContentList.vue`（内容管理列表）
@@ -307,3 +307,12 @@ juejin/
   - **前端对接**：`app/stores/user.ts` 移除客户端 cookie 改内存态；`app/composables/useAuth.ts` 对接 `/api/auth/login` 和 `/api/auth/logout`；`app/plugins/auth.ts` SSR 时拉取 `/api/user/current` 恢复登录态
   - **ECS 部署**：Docker 多阶段构建（`node:24-alpine`），`docker-compose.yml` 暴露 `3000:3000`，volume `./data:/app/data` 持久化 SQLite，日志轮转 10MB×3，JWT_SECRET 随机生成
   - **公网验证通过**：http://121.43.208.113:3000 —— 文章列表 API 正常、登录签发 JWT Cookie、点赞切换正确、首页 SSR 渲染 `<title>掘金 - 一个帮助开发者成长的社区</title>`
+- **阶段 8 已完成（8.1 ~ 8.4）**，验证结论：
+  - 交付（类型 / 数据层）：`shared/types/book.ts`（`BookSummary` / `BookSection` / `BookDetail`）、`shared/types/search.ts`（`SearchItem` 联合类型 + `SearchType`）、`shared/types/tag.ts` 新增 `TagDetail`；`shared/constants/search.ts`（`SEARCH_TYPES` 分类 Tab / `DEFAULT_SEARCH_TYPE` / `isSearchType`）；`server/mock/seed.ts` 新增 10 本小册种子（`BOOK_SEEDS` / `generateBooks`）；`server/db/index.ts` 新增 `books` 表与 `listBooks` / `getBookById`、`getTagByName` / `listArticlesByTag` / `listTopArticles`、`searchArticles` / `searchUsers` / `searchTags` / `searchBooks` 仓储（老库「只补灌小册」兼容种子逻辑）
+  - 交付（接口）：`GET /api/search`（按 `q` + `type` 聚合文章/用户/标签/小册结果后统一游标分页）、`GET /api/tag/[tag]`（标签信息 + 标签下文章流）、`GET /api/rank/article`（阅读榜前 10）、`GET /api/book/list`、`GET /api/book/[id]`
+  - 交付（前端）：`useSearch`（关键字/分类与 URL query 双向同步 + 防抖后取数 + 游标追加）、`useTagDetail`、`useRank`（`Promise.all` 并行作者榜 + 文章榜）、`useBookList`、`useBookDetail`；组件 `layout/AppSearch.vue`（400ms 防抖，站内原地 `replace` query、站外 `push` 跳转 `/search`）、`search/ResultList.vue`（按 `type` 区分渲染，文章复用 `ArticleCard`）、`book/Card.vue`、`rank/AuthorList.vue`、`rank/ArticleList.vue`；页面 `search.vue`、`tag/[tag].vue`、`rank/index.vue`、`books/index.vue`、`book/[id].vue`（`article` 布局 + 动态 SEO meta + 不存在兜底）
+  - 连带改动：`AppHeader` 占位搜索框替换为 `AppSearch`，导航项由占位的「课程/商城」改为可用的「小册 `/books`」「排行榜 `/rank`」；`AppSidebar` 热门话题标签接入 `/tag/[name]`；`utils/format.ts` 新增 `formatPrice`（分 → `¥xx.xx`，0 显示「免费」）
+  - 取舍说明：用户主页（阶段 5.3）尚未实现，搜索结果中的「用户」项以展示态呈现（头像/昵称/简介 + 关注按钮），未做跳转以避免死链
+  - `pnpm lint` ✅（0 warning / 0 error）· `pnpm typecheck` ✅（exit 0，仅既有 `Duplicated imports` 警告）· `pnpm build` ✅（Client 2.13 MB / gzip 717.05 kB · Server 678.07 kB · Nitro 6.93 MB）
+  - SSR 冒烟（node .output，:3500）：`/search?q=前端`、`/tag/前端`、`/rank`、`/books`、`/book/book_1` 均 **HTTP 200** 且标题正确；`/book/nope_404`、`/tag/nope_404` 走兜底页（HTTP 200）；搜索结果直出 `/article/article_*` 链接、标签页直出「N 篇文章 / N 人关注」、排行榜直出「作者榜/文章榜/掘力值」、小册详情直出「目录/已完更/立即购买」；`__NUXT__` 载荷含 `search:*` / `tag-detail:*` / `rank-author` / `rank-article` / `book-list` / `book-detail:book_1`；首页头部含 `/books`、`/rank` 导航与搜索输入框，侧栏热门话题 `href="/tag/*"` ✅
+  - 接口冒烟：`GET /api/search?q=低代码&type=all&limit=3`、`GET /api/search?q=前端&type=tag`、`GET /api/book/list?limit=2`、`GET /api/book/book_1`、`GET /api/rank/article`、`GET /api/tag/前端?limit=2` 均 `err_no: 0`，游标 `hasMore/cursor` 正常 ✅

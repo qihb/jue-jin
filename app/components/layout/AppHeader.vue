@@ -5,8 +5,8 @@ const { user, isLoggedIn, loginWithDemo, logout } = useAuth()
 const NAV_ITEMS = [
   { label: '首页', to: '/', icon: 'i-lucide:house' },
   { label: '沸点', to: '/pins', icon: 'i-lucide:message-square' },
-  { label: '课程', to: '/courses', icon: 'i-lucide:graduation-cap' },
-  { label: '商城', to: '/shop', icon: 'i-lucide:shopping-bag' },
+  { label: '小册', to: '/books', icon: 'i-lucide:book-open' },
+  { label: '排行榜', to: '/rank', icon: 'i-lucide:trophy' },
 ] as const
 </script>
 
@@ -36,17 +36,7 @@ const NAV_ITEMS = [
       </nav>
 
       <div class="ml-auto flex items-center gap-2">
-        <div class="relative hidden w-60 lg:block">
-          <Icon
-            name="i-lucide:search"
-            class="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-jj-text-3"
-          />
-          <input
-            type="search"
-            placeholder="搜索文章 / 沸点 / 用户"
-            class="h-8 w-full rounded bg-jj-bg-input pr-3 pl-9 text-sm text-jj-text-1 outline-none placeholder:text-jj-text-3 focus:ring-1 focus:ring-jj-primary"
-          >
-        </div>
+        <AppSearch />
 
         <BaseButton variant="secondary" size="sm" @click="navigateTo('/creator')">
           创作者中心

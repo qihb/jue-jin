@@ -36,7 +36,9 @@ const FRIEND_LINKS = ['用户协议', '隐私政策', '帮助中心', '关于我
     <section class="rounded-jj-card bg-jj-bg-card p-4 shadow-jj-card">
       <h2 class="text-sm font-medium text-jj-text-1">热门话题</h2>
       <div class="mt-3 flex flex-wrap gap-2">
-        <BaseTag v-for="tag in hotTags" :key="tag.id" tone="default">#{{ tag.name }}</BaseTag>
+        <NuxtLink v-for="tag in hotTags" :key="tag.id" :to="`/tag/${tag.name}`">
+          <BaseTag tone="default">#{{ tag.name }}</BaseTag>
+        </NuxtLink>
       </div>
     </section>
 

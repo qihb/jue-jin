@@ -5,6 +5,9 @@ import type {
   ArticleDetail,
   ArticleSummary,
   AuthorRankItem,
+  BookDetail,
+  BookSection,
+  BookSummary,
   Comment,
   CommentTargetType,
   CursorPage,
@@ -14,7 +17,7 @@ import type {
   User,
   UserBrief,
 } from '~~/shared/types'
-import { generateMockData, toArticleSummary, toUserBrief } from '../mock/seed'
+import { generateMockData, toArticleSummary, toUserBrief, type MockData } from '../mock/seed'
 
 /**
  * SQLite 持久化层。
@@ -124,18 +127,38 @@ db.exec(`
     article_count INTEGER NOT NULL DEFAULT 0,
     follower_count INTEGER NOT NULL DEFAULT 0
   );
+
+  CREATE TABLE IF NOT EXISTS books (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    cover TEXT NOT NULL DEFAULT '',
+    description TEXT NOT NULL DEFAULT '',
+    author_id TEXT NOT NULL,
+    tags TEXT NOT NULL DEFAULT '[]',
+    price INTEGER NOT NULL DEFAULT 0,
+    finished INTEGER NOT NULL DEFAULT 0,
+    section_count INTEGER NOT NULL DEFAULT 0,
+    learner_count INTEGER NOT NULL DEFAULT 0,
+    collect_count INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    sections TEXT NOT NULL DEFAULT '[]'
+  );
+  CREATE INDEX IF NOT EXISTS idx_books_created ON books(created_at DESC);
 `)
 
 /* ============================== 种子数据 ============================== */
 
 const userCount = (db.prepare('SELECT COUNT(*) AS c FROM users').get() as { c: number }).c
-if (userCount === 0) {
-  seedDatabase()
+const bookCount = (db.prepare('SELECT COUNT(*) AS c FROM books').get() as { c: number }).c
+
+// 老库可能在新增小册表前已灌过种子：此时只补灌小册，不动既有数据
+if (userCount === 0 || bookCount === 0) {
+  const data = generateMockData()
+  if (userCount === 0) seedDatabase(data)
+  if (bookCount === 0) seedBooks(data.books)
 }
 
-function seedDatabase() {
-  const data = generateMockData()
-
+function seedDatabase(data: MockData) {
   db.exec('BEGIN')
 
   const insertUser = db.prepare(
@@ -239,6 +262,34 @@ function seedDatabase() {
   )
   for (const t of data.tags) {
     insertTag.run(t.id, t.name, t.icon, t.categoryId, t.description, t.articleCount, t.followerCount)
+  }
+
+  db.exec('COMMIT')
+}
+
+function seedBooks(books: BookDetail[]) {
+  db.exec('BEGIN')
+
+  const insertBook = db.prepare(
+    `INSERT INTO books (id, title, cover, description, author_id, tags, price, finished, section_count, learner_count, collect_count, created_at, sections)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  )
+  for (const book of books) {
+    insertBook.run(
+      book.id,
+      book.title,
+      book.cover,
+      book.description,
+      book.author.id,
+      JSON.stringify(book.tags),
+      book.price,
+      book.finished ? 1 : 0,
+      book.sectionCount,
+      book.learnerCount,
+      book.collectCount,
+      book.createdAt,
+      JSON.stringify(book.sections),
+    )
   }
 
   db.exec('COMMIT')
@@ -654,12 +705,211 @@ export function listTags(params: { limit: number; cursor: string }): CursorPage<
 
   const rows = db
     .prepare('SELECT * FROM tags ORDER BY article_count DESC LIMIT ? OFFSET ?')
-    .all(limit + 1, offset) as unknown as Tag[]
+    .all(limit + 1, offset) as unknown as TagRow[]
 
   const hasMore = rows.length > limit
-  const list = rows.slice(0, limit)
+  const list = rows.slice(0, limit).map(rowToTag)
 
   return { list, cursor: hasMore ? String(offset + limit) : '', hasMore }
+}
+
+interface TagRow {
+  id: string
+  name: string
+  icon: string
+  category_id: string
+  description: string
+  article_count: number
+  follower_count: number
+}
+
+/** 标签行 → 领域对象（表字段为 snake_case，需显式映射） */
+function rowToTag(row: TagRow): Tag {
+  return {
+    id: row.id,
+    name: row.name,
+    icon: row.icon,
+    categoryId: row.category_id,
+    description: row.description,
+    articleCount: row.article_count,
+    followerCount: row.follower_count,
+  }
+}
+
+/** 按标签名取标签（标签页详情用） */
+export function getTagByName(name: string): Tag | null {
+  const row = db.prepare('SELECT * FROM tags WHERE name = ?').get(name) as TagRow | undefined
+  return row ? rowToTag(row) : null
+}
+
+/** 标签下的文章流：tags 以 JSON 数组文本存储，用 LIKE 匹配标签名 */
+export function listArticlesByTag(
+  tagName: string,
+  params: { limit: number; cursor: string },
+  userId: ID | null,
+): CursorPage<ArticleSummary> {
+  const { limit, cursor } = params
+  const offset = Number.parseInt(cursor, 10) || 0
+
+  const rows = db
+    .prepare(`${ARTICLE_SELECT} WHERE a.tags LIKE ? ORDER BY a.created_at DESC LIMIT ? OFFSET ?`)
+    .all(`%"${tagName}"%`, limit + 1, offset) as unknown as ArticleWithAuthorRow[]
+
+  const hasMore = rows.length > limit
+  const list = rows.slice(0, limit).map((row) =>
+    toArticleSummary(rowToArticleDetail(row, isArticleLiked(row.id, userId), isArticleCollected(row.id, userId))),
+  )
+
+  return { list, cursor: hasMore ? String(offset + limit) : '', hasMore }
+}
+
+/** 文章榜：按阅读量倒序取前 N 篇 */
+export function listTopArticles(limit: number, userId: ID | null): ArticleSummary[] {
+  const rows = db
+    .prepare(`${ARTICLE_SELECT} ORDER BY a.view_count DESC, a.created_at DESC LIMIT ?`)
+    .all(limit) as unknown as ArticleWithAuthorRow[]
+  return rows.map((row) =>
+    toArticleSummary(rowToArticleDetail(row, isArticleLiked(row.id, userId), isArticleCollected(row.id, userId))),
+  )
+}
+
+/* ============================== 小册 ============================== */
+
+const BOOK_SELECT = `
+  SELECT b.*, u.username, u.nickname, u.avatar, u.level, u.description
+  FROM books b
+  JOIN users u ON u.id = b.author_id
+`
+
+interface BookRow {
+  id: string
+  title: string
+  cover: string
+  description: string
+  author_id: string
+  tags: string
+  price: number
+  finished: number
+  section_count: number
+  learner_count: number
+  collect_count: number
+  created_at: string
+  sections: string
+}
+
+interface BookWithAuthorRow extends BookRow {
+  username: string
+  nickname: string
+  avatar: string
+  level: number
+  description: string
+}
+
+function rowToBookDetail(row: BookWithAuthorRow): BookDetail {
+  return {
+    id: row.id,
+    title: row.title,
+    cover: row.cover,
+    description: row.description,
+    author: {
+      id: row.author_id,
+      username: row.username,
+      nickname: row.nickname,
+      avatar: row.avatar,
+      level: row.level,
+      description: row.description,
+    },
+    tags: JSON.parse(row.tags) as string[],
+    price: row.price,
+    finished: row.finished === 1,
+    sectionCount: row.section_count,
+    learnerCount: row.learner_count,
+    collectCount: row.collect_count,
+    createdAt: row.created_at,
+    sections: JSON.parse(row.sections) as BookSection[],
+  }
+}
+
+/** 小册详情 → 列表项（剥离章节目录） */
+function toBookSummary(book: BookDetail): BookSummary {
+  return {
+    id: book.id,
+    title: book.title,
+    cover: book.cover,
+    description: book.description,
+    author: book.author,
+    tags: book.tags,
+    price: book.price,
+    finished: book.finished,
+    sectionCount: book.sectionCount,
+    learnerCount: book.learnerCount,
+    collectCount: book.collectCount,
+    createdAt: book.createdAt,
+  }
+}
+
+export function listBooks(params: { limit: number; cursor: string }): CursorPage<BookSummary> {
+  const { limit, cursor } = params
+  const offset = Number.parseInt(cursor, 10) || 0
+
+  const rows = db
+    .prepare(`${BOOK_SELECT} ORDER BY b.created_at DESC LIMIT ? OFFSET ?`)
+    .all(limit + 1, offset) as unknown as BookWithAuthorRow[]
+
+  const hasMore = rows.length > limit
+  const list = rows.slice(0, limit).map((row) => toBookSummary(rowToBookDetail(row)))
+
+  return { list, cursor: hasMore ? String(offset + limit) : '', hasMore }
+}
+
+export function getBookById(id: ID): BookDetail | null {
+  const row = db.prepare(`${BOOK_SELECT} WHERE b.id = ?`).get(id) as BookWithAuthorRow | undefined
+  return row ? rowToBookDetail(row) : null
+}
+
+/* ============================== 搜索 ============================== */
+
+/** LIKE 参数：`%关键字%`（mock 数据量小，未对通配符做转义） */
+function likeParam(keyword: string): string {
+  return `%${keyword}%`
+}
+
+export function searchArticles(keyword: string, userId: ID | null): ArticleSummary[] {
+  const like = likeParam(keyword)
+  const rows = db
+    .prepare(
+      `${ARTICLE_SELECT} WHERE a.title LIKE ? OR a.brief LIKE ? OR u.nickname LIKE ? ORDER BY a.view_count DESC, a.created_at DESC`,
+    )
+    .all(like, like, like) as unknown as ArticleWithAuthorRow[]
+  return rows.map((row) =>
+    toArticleSummary(rowToArticleDetail(row, isArticleLiked(row.id, userId), isArticleCollected(row.id, userId))),
+  )
+}
+
+export function searchUsers(keyword: string): UserBrief[] {
+  const like = likeParam(keyword)
+  const rows = db
+    .prepare(
+      'SELECT * FROM users WHERE nickname LIKE ? OR username LIKE ? OR description LIKE ? ORDER BY power DESC LIMIT 30',
+    )
+    .all(like, like, like) as unknown as UserRow[]
+  return rows.map((row) => toUserBrief(rowToUser(row)))
+}
+
+export function searchTags(keyword: string): Tag[] {
+  const like = likeParam(keyword)
+  const rows = db
+    .prepare('SELECT * FROM tags WHERE name LIKE ? OR description LIKE ? ORDER BY article_count DESC')
+    .all(like, like) as unknown as TagRow[]
+  return rows.map(rowToTag)
+}
+
+export function searchBooks(keyword: string): BookSummary[] {
+  const like = likeParam(keyword)
+  const rows = db
+    .prepare(`${BOOK_SELECT} WHERE b.title LIKE ? OR b.description LIKE ? ORDER BY b.learner_count DESC`)
+    .all(like, like) as unknown as BookWithAuthorRow[]
+  return rows.map((row) => toBookSummary(rowToBookDetail(row)))
 }
 
 /* ============================== 交互：点赞 / 收藏 ============================== */

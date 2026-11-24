@@ -2,13 +2,24 @@ export type { ApiResp, CursorPage, CursorParams, CursorQuery, ID } from './commo
 
 export type { AuthorRankItem, FollowState, User, UserBrief } from './user'
 
-export type { Category, Tag } from './tag'
+export type { Category, Tag, TagDetail } from './tag'
 
 export type { ArticleDetail, ArticleFeedQuery, ArticleFormValue, ArticleSummary } from './article'
 
 export type { ArticleDraft } from './draft'
 
 export type { CreatorOverview, CreatorTrendPoint, CreatorTrends } from './creator'
+
+export type { BookDetail, BookSection, BookSummary } from './book'
+
+export type {
+  SearchArticleItem,
+  SearchBookItem,
+  SearchItem,
+  SearchTagItem,
+  SearchType,
+  SearchUserItem,
+} from './search'
 
 export type { PinDetail, PinLikeResult, PinSummary } from './pin'
 
