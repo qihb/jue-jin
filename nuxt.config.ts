@@ -9,6 +9,13 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
+  components: [
+    // base/ → BaseButton、article/ → ArticleCard …
+    { path: '~/components', pathPrefix: true },
+    // layout/ 不加目录前缀：AppHeader / AppFooter / AppSidebar
+    { path: '~/components/layout', pathPrefix: false },
+  ],
+
   vite: {
     plugins: [tailwindcss()],
   },

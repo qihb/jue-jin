@@ -30,7 +30,7 @@ useSeoMeta({
 </script>
 
 <template>
-  <main class="min-h-screen bg-jj-bg-page px-4 py-10">
+  <div>
     <section class="mx-auto max-w-3xl rounded-jj-card bg-jj-bg-card p-6 shadow-jj-card">
       <header class="flex items-center gap-2">
         <Icon name="i-lucide:file-text" class="size-6 text-jj-primary" />
@@ -76,5 +76,5 @@ useSeoMeta({
         </li>
       </ul>
     </section>
-  </main>
+  </div>
 </template>

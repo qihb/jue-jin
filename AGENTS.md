@@ -25,6 +25,7 @@
 
 > **运行环境**：Node `^22.21.0 || ^24.11.0 || >=26.0.0`（见 `.nvmrc`，当前固定 `24.11.0`）。
 > Node 20 及以下会导致 `eslint` 启动崩溃（缺少 `Object.groupBy`），务必先 `nvm use` 再执行任何命令。
+> **pnpm 版本固定 `10.33.0`**（`package.json#packageManager`）。本机 pnpm 由 `vite-plus` 托管并会自动升级；一旦升到 pnpm 12，会因 store 布局不同重建 `node_modules`，并被其默认的 `minimumReleaseAge`（24h）供应链策略拦截安装。如需调整，请先改本文件再动配置。
 
 ---
 

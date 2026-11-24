@@ -148,11 +148,11 @@ juejin/
 - [x] 0.4 配置 ESLint + Prettier + Oxlint + TypeScript strict，补齐 `lint / format / typecheck` 脚本
 - [x] 0.5 建立 `app/` `server/` `shared/` 目录骨架，以 `/api/health` + 首页自检页完成端到端校验
 
-### 阶段 1 · 设计系统与全局布局
-- [ ] 1.1 抽取视觉 token（主色 #1e80ff、灰阶、圆角、阴影、字体）
-- [ ] 1.2 `base/` 基础组件：Button / Avatar / Tabs / Tag / Modal / Skeleton / Empty
-- [ ] 1.3 `AppHeader` + `AppFooter` + `AppSidebar`，`default` 布局
-- [ ] 1.4 暗色主题切换（useTheme + CSS 变量）
+### 阶段 1 · 设计系统与全局布局 ✅
+- [x] 1.1 抽取视觉 token（主色 #1e80ff、灰阶、圆角、阴影、字体，并补 `.dark` 暗色覆盖）—— `app/assets/css/main.css`
+- [x] 1.2 `base/` 基础组件：Button / Avatar / Tabs / Tag / Modal / Skeleton / Empty —— `app/components/base/`
+- [x] 1.3 `AppHeader` + `AppFooter` + `AppSidebar`，`default` 布局 —— `app/components/layout/`、`app/layouts/default.vue`（`nuxt.config.ts` 将 `layout/` 设为 `pathPrefix: false`，`app.vue` 补 `<NuxtLayout>`）
+- [x] 1.4 暗色主题切换（`useTheme` + cookie 持久化 + `<html class="dark">`）—— `app/composables/useTheme.ts`
 
 ### 阶段 2 · mock 数据层与类型
 - [ ] 2.1 `shared/types` 定义全部实体类型
@@ -212,7 +212,13 @@ juejin/
 - **阶段 0 已完成（0.1 ~ 0.5）**，验证结论：
   - `pnpm install --frozen-lockfile` ✅ · `pnpm lint`（oxlint + eslint）✅ · `pnpm typecheck` ✅ · `pnpm build` ✅
   - 运行时冒烟：SSR 输出含 Tailwind token 类名与 CSS 变量、Pinia 状态被序列化、`useAsyncData` 在 SSR 命中 `/api/health`（`err_no: 0`）✅
-- **环境已固化**：Node `24.11.0`（`.nvmrc` + `package.json#engines`）。执行任何命令前需先 `nvm use`——本机默认仍为 `v20.19.1`，Node 20 会让 ESLint 10 因缺少 `Object.groupBy` 直接崩溃。
+- **阶段 1 已完成（1.1 ~ 1.4）**，验证结论：
+  - `pnpm lint` ✅（0 warning / 0 error）· `pnpm typecheck` ✅ · `pnpm build` ✅
+  - 运行时冒烟（dev:3100）：SSR 输出含 `AppHeader`（Logo/导航/搜索/创作者中心/主题切换/消息/登录）、`AppSidebar`（签到/作者榜/热门话题/App 下载）、`AppFooter`；`<html>` class 随 cookie 变化（无 cookie / `jj-theme=light` → `class=""`，`jj-theme=dark` → `class="dark"`）✅
+  - 生产 CSS 校验：`h-15`、`.dark`、`--color-jj-primary`、`bg-jj-gold/15`、`animate-pulse` 均已生成 ✅
+- **环境已固化**：Node `24.11.0`（`.nvmrc` + `package.json#engines`）；pnpm `10.33.0`（`package.json#packageManager`）。执行任何命令前需先 `nvm use`——Node 20 会让 ESLint 10 因缺少 `Object.groupBy` 直接崩溃。
 - **依赖偏离说明**：`typescript` 固定 `^5.9`（TS 7 超出 vue-tsc / @typescript-eslint 的 peer 范围）；补充 `cssnano` 消除 Nuxt PostCSS 构建告警。
+- **环境事件（需知悉）**：`vite-plus` 于本次自动把 pnpm 由 `10.33.0` 升到 `12.23.0`，触发"store 不一致 → 重建 node_modules"并撞上 pnpm 12 默认的 `minimumReleaseAge`（24h）供应链策略，导致 `node_modules` 一度被清空。已通过 `packageManager: pnpm@10.33.0` 固定版本并用 `pnpm install --frozen-lockfile` 恢复，锁文件未改动。
+- **已知取舍（用户决定）**：暂不安装 `@iconify-json/lucide`，图标在浏览器端向 Iconify 在线 API 拉取（需联网；SSR HTML 中不含图标 SVG）。后续若需离线/首屏图标，再补该 devDependency。
 - 备注：`agent.md` 采用社区通用大写命名 `AGENTS.md`（macOS 文件系统不区分大小写）。
-- 待办：阶段 1 及之后均**待用户指定步骤后执行**。
+- 待办：阶段 2 及之后均**待用户指定步骤后执行**。

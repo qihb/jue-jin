@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 
-/* 暗色模式基于 .dark 类（供后续主题切换使用） */
+/* 暗色模式基于 .dark 类（由 useTheme 写在 <html> 上） */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ============ 掘金设计 token：组件内禁止写魔法色值 ============ */
@@ -19,6 +19,9 @@
   /* 背景与描边 */
   --color-jj-bg-page: #f4f5f5;
   --color-jj-bg-card: #ffffff;
+  --color-jj-bg-hover: #f7f8fa;
+  --color-jj-bg-input: #f2f3f5;
+  --color-jj-bg-mask: rgb(0 0 0 / 45%);
   --color-jj-border: #e5e6eb;
 
   /* 功能色 */
@@ -37,11 +40,35 @@
     'microsoft yahei', sans-serif;
 }
 
+/* ============ 暗色主题：覆盖同名 token，组件无需改动 ============ */
+.dark {
+  --color-jj-primary-light: #1b2c44;
+
+  --color-jj-text-1: #e5e6eb;
+  --color-jj-text-2: #c9cdd4;
+  --color-jj-text-3: #86909c;
+  --color-jj-text-4: #4e5969;
+
+  --color-jj-bg-page: #17181a;
+  --color-jj-bg-card: #1d1e20;
+  --color-jj-bg-hover: #27282b;
+  --color-jj-bg-input: #27282b;
+  --color-jj-bg-mask: rgb(0 0 0 / 60%);
+  --color-jj-border: #2f3033;
+
+  --shadow-jj-card: 0 1px 2px rgb(0 0 0 / 24%);
+}
+
 @layer base {
   html {
     font-family: var(--font-jj-sans);
     color: var(--color-jj-text-1);
     background-color: var(--color-jj-bg-page);
     -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    color: var(--color-jj-text-1);
+    background-color: var(--color-jj-bg-page);
   }
 }
