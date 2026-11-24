@@ -6,7 +6,7 @@ const FOOTER_LINKS = ['关于我们', '用户协议', '隐私政策', '友情链
 
 <template>
   <footer class="border-t border-jj-border bg-jj-bg-card py-8">
-    <div class="mx-auto max-w-[1440px] px-4 text-center text-xs leading-6 text-jj-text-3">
+    <div class="mx-auto max-w-[1200px] px-4 text-center text-xs leading-6 text-jj-text-3">
       <p>
         <span
           v-for="(link, index) in FOOTER_LINKS"

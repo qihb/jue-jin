@@ -77,7 +77,7 @@ juejin/
 
 **全局框架**
 
-- 顶部导航：Logo、首页、沸点、课程、商城、搜索框、创作者中心入口、消息铃铛、头像下拉（我的主页/我的收藏/设置/退出）
+- 顶部导航：Logo、首页、沸点、课程、APP、AI用量、作品广场、专家标注、搜索框、创作者中心入口（蓝色按钮 + 下拉：写文章/发沸点/写笔记/写代码/草稿箱 + 创作灵感话题）、消息铃铛（未读角标）、头像下拉（昵称/矿石/掘友等级进度/关注·赞过·收藏统计/双列菜单/设置·主题切换·退出登录）
 - 右侧栏：签到卡片、作者榜、热门话题、友情链接、App 下载
 
 | #   | 功能模块        | 路由                                     | 关键点                                                                                            |
@@ -362,3 +362,14 @@ juejin/
   - ④ 工程：新增 `vitest.config.ts` + `tests/**`（34 例纯函数单测）与 `.github/workflows/ci.yml`（`lint → typecheck → test → build`）
   - 验证：`pnpm lint` 0 warning / 0 error（195 files）· `pnpm typecheck` exit 0 · `pnpm test` 34/34 · `pnpm build` 成功 · 无密钥 + `NODE_ENV=production` 启动 exit 1 · 13 个接口冒烟 `err_no: 0` · SSR 首页 40 个内联 SVG
   - 本次同步更新文档：`README.md`、`AGENTS.md`、`docs/deploy.md`、`docs/plans/*.md`
+- **2026-11-24 头部与列表 UI/UX 打磨（已完成）**：本轮聚焦把头部、文章卡片、沸点页与导航对齐掘金官网观感，不涉及数据层与接口变更。
+  - **头部右侧重构（`app/components/layout/AppHeader.vue`）**：右侧顺序固定为「搜索框 → 创作者中心（蓝色按钮 + 下拉）→ 消息铃铛 → 头像（下拉）」；移除原有的发沸点按钮、独立主题切换按钮、设置按钮、退出按钮与昵称文字。
+    - 新增 `app/components/layout/CreatorCenterMenu.vue`：5 个快捷入口（写文章 / 发沸点 / 写笔记 / 写代码 / 草稿箱，彩色图标）+ 创作灵感话题列表（每天一个知识点 / 日新计划 / 每日精选文章）；`defineModel<boolean>` + `onClickOutside` 关闭。
+    - 新增 `app/components/layout/UserMenu.vue`：头像 + 昵称 + 矿石（掘力值）；掘友等级 `JY.{level}` + 进度条（每 2000 掘力值一级）；关注 / 赞过 / 收藏 三列统计；双列菜单（我的主页 / 成长福利、闪念笔记（红点）/ 课程中心、我的优惠 / 我的足迹）；底部：我的设置 | 主题切换（太阳/月亮图标 + 浅色/暗色文字）| 退出登录。
+    - 两个下拉互斥（`creatorOpen` / `userOpen` 互相关闭）。
+    - 主题切换功能从独立按钮移入 `UserMenu` 底部，保留亮/暗切换与 cookie 持久化。
+  - **导航菜单去图标**：`AppHeader.vue` 桌面端横向导航与 `AppNavDrawer.vue` 移动端抽屉导航均只渲染文字（`{{ item.label }}`），移除 `<Icon :name="item.icon">`；`shared/constants/nav.ts` 的 `icon` 字段保留备用。
+  - **文章卡片布局重排（`app/components/article/Card.vue`）**：第一行标题（热门带「热」金标）→ 第二行内容概要（`line-clamp-2`）→ 第三行作者 `|` 时间 `|` 👁 查看 `|` 👍 点赞，`ml-auto` 右侧放分类名 + 标签；右侧封面图统一 `h-20 w-[120px]`。
+  - **文章链接新标签页打开**：`article/Card.vue`、`article/Recommend.vue`、`rank/ArticleList.vue`、`creator/CreatorContentList.vue` 均加 `target="_blank"`；`notification/List.vue` 仅在 `targetType === 'article'` 时新标签页打开。
+  - **沸点页右侧栏用户卡片升级**：`server/middleware/auth.ts`、`server/api/user/current.get.ts`、`server/api/auth/login.post.ts`、`server/api/auth/register.post.ts` 由返回 `UserBrief` 升级为返回完整 `User`（含 `job/company/power/articleCount/followCount/followerCount/likedCount`）；`app/stores/user.ts` 改为 `ref<User | null>`；`app/composables/useAuth.ts` 请求 `User`，局部变量改名 `next` 避免 `no-shadow`；`app/plugins/auth.ts` SSR 时 `useAsyncData<User | null>`。`UserBrief` 仍用于列表/作者位等轻量场景，未删除。
+  - 验证：`pnpm lint` 0 warning / 0 error · `pnpm typecheck` exit 0（仅既有 `Duplicated imports` 警告）· 桌面端截图确认导航仅剩文字、头部右侧为「搜索 / 创作者中心 / 消息 / 头像」四件套。

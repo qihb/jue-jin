@@ -6,7 +6,7 @@
   <div class="flex min-h-screen flex-col">
     <AppHeader />
 
-    <div class="mx-auto flex w-full max-w-[1440px] flex-1 gap-4 px-4 py-4">
+    <div class="mx-auto flex w-full max-w-[1200px] flex-1 gap-4 px-4 py-4">
       <div class="min-w-0 flex-1">
         <slot />
       </div>
