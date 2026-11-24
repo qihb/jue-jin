@@ -16,6 +16,16 @@ export default defineNuxtConfig({
     },
   },
 
+  /**
+   * 图标：`svg` 模式 + `local` 服务端图标包。
+   * 图标数据来自本地 `@iconify-json/lucide`，SSR 直出内联 SVG，
+   * 不再依赖 Iconify 在线 API（离线可用、无首屏图标闪烁）。
+   */
+  icon: {
+    mode: 'svg',
+    serverBundle: 'local',
+  },
+
   /** SEO 站点信息（nuxt-site-config）：sitemap 与 OG 标签的基准地址 */
   site: {
     url: SITE_URL,

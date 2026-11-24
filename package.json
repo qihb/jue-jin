@@ -12,6 +12,8 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "lint": "oxlint . && eslint .",
     "lint:fix": "oxlint . --fix && eslint . --fix",
     "format": "prettier --write .",
@@ -37,6 +39,7 @@
     "vue-router": "^5.4.0"
   },
   "devDependencies": {
+    "@iconify-json/lucide": "^1.2.158",
     "@nuxt/eslint": "^1.17.0",
     "@tailwindcss/vite": "^4.3.5",
     "@types/node": "^24",
@@ -46,6 +49,7 @@
     "prettier": "^3.10.1",
     "tailwindcss": "^4.3.5",
     "typescript": "^5",
+    "vitest": "^5.1.1",
     "vue-tsc": "^3.3.14"
   }
 }
