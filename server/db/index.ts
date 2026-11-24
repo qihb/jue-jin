@@ -8,16 +8,30 @@ import type {
   BookDetail,
   BookSection,
   BookSummary,
+  CollectionDetail,
+  CollectionSummary,
   Comment,
   CommentTargetType,
   CursorPage,
   ID,
+  NotificationItem,
+  NotificationTab,
+  NotificationTargetType,
+  NotificationUnread,
   PinDetail,
   Tag,
   User,
   UserBrief,
 } from '~~/shared/types'
-import { generateMockData, toArticleSummary, toUserBrief, type MockData } from '../mock/seed'
+import { emptyNotificationUnread, isNotificationTab } from '~~/shared/constants'
+import {
+  generateMockData,
+  toArticleSummary,
+  toUserBrief,
+  type CollectionRecord,
+  type MockData,
+  type NotificationRecord,
+} from '../mock/seed'
 
 /**
  * SQLite 持久化层。
@@ -144,18 +158,60 @@ db.exec(`
     sections TEXT NOT NULL DEFAULT '[]'
   );
   CREATE INDEX IF NOT EXISTS idx_books_created ON books(created_at DESC);
+
+  CREATE TABLE IF NOT EXISTS notifications (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    tab TEXT NOT NULL,
+    actor_id TEXT,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL DEFAULT '',
+    target_type TEXT NOT NULL DEFAULT 'none',
+    target_id TEXT NOT NULL DEFAULT '',
+    is_read INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, tab, created_at DESC);
+
+  CREATE TABLE IF NOT EXISTS collections (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    cover TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_collections_user ON collections(user_id, updated_at DESC);
+
+  CREATE TABLE IF NOT EXISTS collection_articles (
+    collection_id TEXT NOT NULL,
+    article_id TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (collection_id, article_id)
+  );
 `)
 
 /* ============================== 种子数据 ============================== */
 
 const userCount = (db.prepare('SELECT COUNT(*) AS c FROM users').get() as { c: number }).c
 const bookCount = (db.prepare('SELECT COUNT(*) AS c FROM books').get() as { c: number }).c
+const notificationCount = (db.prepare('SELECT COUNT(*) AS c FROM notifications').get() as { c: number })
+  .c
+const collectionCount = (db.prepare('SELECT COUNT(*) AS c FROM collections').get() as { c: number }).c
 
-// 老库可能在新增小册表前已灌过种子：此时只补灌小册，不动既有数据
-if (userCount === 0 || bookCount === 0) {
+// 老库可能在新增表前已灌过种子：此时只补灌缺失的表，不动既有数据
+if (
+  userCount === 0 ||
+  bookCount === 0 ||
+  notificationCount === 0 ||
+  collectionCount === 0
+) {
   const data = generateMockData()
   if (userCount === 0) seedDatabase(data)
   if (bookCount === 0) seedBooks(data.books)
+  if (notificationCount === 0) seedNotifications(data.notifications)
+  if (collectionCount === 0) seedCollections(data.collections)
 }
 
 function seedDatabase(data: MockData) {
@@ -290,6 +346,59 @@ function seedBooks(books: BookDetail[]) {
       book.createdAt,
       JSON.stringify(book.sections),
     )
+  }
+
+  db.exec('COMMIT')
+}
+
+function seedNotifications(records: NotificationRecord[]) {
+  db.exec('BEGIN')
+
+  const insert = db.prepare(
+    `INSERT INTO notifications (id, user_id, tab, actor_id, title, content, target_type, target_id, is_read, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  )
+  for (const item of records) {
+    insert.run(
+      item.id,
+      item.userId,
+      item.tab,
+      item.actor ? item.actor.id : null,
+      item.title,
+      item.content,
+      item.targetType,
+      item.targetId,
+      item.read ? 1 : 0,
+      item.createdAt,
+    )
+  }
+
+  db.exec('COMMIT')
+}
+
+function seedCollections(records: CollectionRecord[]) {
+  db.exec('BEGIN')
+
+  const insertCollection = db.prepare(
+    `INSERT INTO collections (id, user_id, name, description, cover, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  )
+  const insertItem = db.prepare(
+    `INSERT OR IGNORE INTO collection_articles (collection_id, article_id, sort_order) VALUES (?, ?, ?)`,
+  )
+  for (const item of records) {
+    insertCollection.run(
+      item.id,
+      item.userId,
+      item.name,
+      item.description,
+      item.cover,
+      item.createdAt,
+      item.updatedAt,
+    )
+    item.articleIds.forEach((articleId, index) => {
+      insertItem.run(item.id, articleId, index)
+    })
   }
 
   db.exec('COMMIT')
@@ -1059,6 +1168,204 @@ export function createArticle(
   const detail = getArticleById(id, authorId)
   if (!detail) throw new Error('文章创建失败')
   return toArticleSummary(detail)
+}
+
+/* ============================== 消息通知 ============================== */
+
+const NOTIFICATION_SELECT = `
+  SELECT n.*, u.username, u.nickname, u.avatar, u.level, u.description
+  FROM notifications n
+  LEFT JOIN users u ON u.id = n.actor_id
+`
+
+interface NotificationRow {
+  id: string
+  user_id: string
+  tab: string
+  actor_id: string | null
+  title: string
+  content: string
+  target_type: string
+  target_id: string
+  is_read: number
+  created_at: string
+}
+
+/** LEFT JOIN 用户后的行（系统消息无触发者，相关字段为 null） */
+interface NotificationWithActorRow extends NotificationRow {
+  username: string | null
+  nickname: string | null
+  avatar: string | null
+  level: number | null
+  description: string | null
+}
+
+function rowToNotification(row: NotificationWithActorRow): NotificationItem {
+  const actor: UserBrief | null =
+    row.actor_id !== null && row.username !== null
+      ? {
+          id: row.actor_id,
+          username: row.username,
+          nickname: row.nickname ?? '',
+          avatar: row.avatar ?? '',
+          level: row.level ?? 1,
+          description: row.description ?? '',
+        }
+      : null
+
+  return {
+    id: row.id,
+    tab: row.tab as NotificationTab,
+    actor,
+    title: row.title,
+    content: row.content,
+    targetType: row.target_type as NotificationTargetType,
+    targetId: row.target_id,
+    read: row.is_read === 1,
+    createdAt: row.created_at,
+  }
+}
+
+/** 当前用户某分类下的消息：按时间倒序游标分页 */
+export function listNotifications(
+  userId: ID,
+  params: { tab: NotificationTab; limit: number; cursor: string },
+): CursorPage<NotificationItem> {
+  const { tab, limit, cursor } = params
+  const offset = Number.parseInt(cursor, 10) || 0
+
+  const rows = db
+    .prepare(
+      `${NOTIFICATION_SELECT} WHERE n.user_id = ? AND n.tab = ? ORDER BY n.created_at DESC LIMIT ? OFFSET ?`,
+    )
+    .all(userId, tab, limit + 1, offset) as unknown as NotificationWithActorRow[]
+
+  const hasMore = rows.length > limit
+  const list = rows.slice(0, limit).map(rowToNotification)
+
+  return { list, cursor: hasMore ? String(offset + limit) : '', hasMore }
+}
+
+/** 当前用户的未读消息统计（总数 + 各分类） */
+export function countUnreadByTab(userId: ID): NotificationUnread {
+  const rows = db
+    .prepare(
+      'SELECT tab, COUNT(*) AS c FROM notifications WHERE user_id = ? AND is_read = 0 GROUP BY tab',
+    )
+    .all(userId) as unknown as { tab: string; c: number }[]
+
+  const unread = emptyNotificationUnread()
+  for (const row of rows) {
+    if (isNotificationTab(row.tab)) {
+      unread.byTab[row.tab] = row.c
+      unread.total += row.c
+    }
+  }
+  return unread
+}
+
+/** 标记已读：传入 tab 只标记该分类，否则标记全部 */
+export function markNotificationsRead(userId: ID, tab?: NotificationTab): void {
+  if (tab) {
+    db.prepare('UPDATE notifications SET is_read = 1 WHERE user_id = ? AND tab = ?').run(userId, tab)
+  } else {
+    db.prepare('UPDATE notifications SET is_read = 1 WHERE user_id = ?').run(userId)
+  }
+}
+
+/* ============================== 收藏集 ============================== */
+
+const COLLECTION_SELECT = `
+  SELECT c.*, (SELECT COUNT(*) FROM collection_articles ca WHERE ca.collection_id = c.id) AS article_count
+  FROM collections c
+`
+
+interface CollectionRow {
+  id: string
+  user_id: string
+  name: string
+  description: string
+  cover: string
+  created_at: string
+  updated_at: string
+  article_count: number
+}
+
+function rowToCollectionSummary(row: CollectionRow): CollectionSummary {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    cover: row.cover,
+    articleCount: row.article_count,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
+/** 当前用户的收藏集列表：按更新时间倒序游标分页 */
+export function listCollections(
+  userId: ID,
+  params: { limit: number; cursor: string },
+): CursorPage<CollectionSummary> {
+  const { limit, cursor } = params
+  const offset = Number.parseInt(cursor, 10) || 0
+
+  const rows = db
+    .prepare(`${COLLECTION_SELECT} WHERE c.user_id = ? ORDER BY c.updated_at DESC LIMIT ? OFFSET ?`)
+    .all(userId, limit + 1, offset) as unknown as CollectionRow[]
+
+  const hasMore = rows.length > limit
+  const list = rows.slice(0, limit).map(rowToCollectionSummary)
+
+  return { list, cursor: hasMore ? String(offset + limit) : '', hasMore }
+}
+
+/** 收藏集详情：概要 + 收录文章（游标分页）。非本人收藏集返回 null */
+export function getCollectionById(
+  id: ID,
+  userId: ID | null,
+  params: { limit: number; cursor: string },
+): CollectionDetail | null {
+  if (!userId) return null
+
+  const row = db.prepare(`${COLLECTION_SELECT} WHERE c.id = ? AND c.user_id = ?`).get(id, userId) as
+    | CollectionRow
+    | undefined
+  if (!row) return null
+
+  const { limit, cursor } = params
+  const offset = Number.parseInt(cursor, 10) || 0
+
+  const articleRows = db
+    .prepare(
+      `SELECT a.*, u.username, u.nickname, u.avatar, u.level, u.description
+       FROM collection_articles ca
+       JOIN articles a ON a.id = ca.article_id
+       JOIN users u ON u.id = a.author_id
+       WHERE ca.collection_id = ?
+       ORDER BY ca.sort_order ASC
+       LIMIT ? OFFSET ?`,
+    )
+    .all(id, limit + 1, offset) as unknown as ArticleWithAuthorRow[]
+
+  const hasMore = articleRows.length > limit
+  const articles = articleRows
+    .slice(0, limit)
+    .map((articleRow) =>
+      toArticleSummary(
+        rowToArticleDetail(
+          articleRow,
+          isArticleLiked(articleRow.id, userId),
+          isArticleCollected(articleRow.id, userId),
+        ),
+      ),
+    )
+
+  return {
+    collection: rowToCollectionSummary(row),
+    articles: { list: articles, cursor: hasMore ? String(offset + limit) : '', hasMore },
+  }
 }
 
 /* ============================== 用户便捷查询（供登录中间件使用） ============================== */

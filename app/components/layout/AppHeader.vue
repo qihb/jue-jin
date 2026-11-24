@@ -1,11 +1,13 @@
 <script setup lang="ts">
 const { isDark, toggleTheme } = useTheme()
 const { user, isLoggedIn, loginWithDemo, logout } = useAuth()
+const { unread } = await useNotificationSummary()
 
 const NAV_ITEMS = [
   { label: '首页', to: '/', icon: 'i-lucide:house' },
   { label: '沸点', to: '/pins', icon: 'i-lucide:message-square' },
   { label: '小册', to: '/books', icon: 'i-lucide:book-open' },
+  { label: '收藏集', to: '/collection', icon: 'i-lucide:folder' },
   { label: '排行榜', to: '/rank', icon: 'i-lucide:trophy' },
 ] as const
 </script>
@@ -51,13 +53,20 @@ const NAV_ITEMS = [
           <Icon :name="isDark ? 'i-lucide:sun' : 'i-lucide:moon'" class="size-5" />
         </button>
 
-        <button
-          type="button"
-          class="relative cursor-pointer rounded p-2 text-jj-text-2 transition-colors hover:bg-jj-bg-hover hover:text-jj-primary"
+        <NuxtLink
+          to="/notification"
+          class="relative rounded p-2 text-jj-text-2 transition-colors hover:bg-jj-bg-hover hover:text-jj-primary"
           title="消息"
+          active-class="text-jj-primary"
         >
           <Icon name="i-lucide:bell" class="size-5" />
-        </button>
+          <span
+            v-if="unread.total > 0"
+            class="absolute top-0.5 right-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-jj-danger px-1 text-[10px] leading-none font-medium text-white"
+          >
+            {{ unread.total > 99 ? '99+' : unread.total }}
+          </span>
+        </NuxtLink>
 
         <div v-if="isLoggedIn" class="flex items-center gap-2">
           <BaseAvatar :src="user?.avatar" :size="28" />

@@ -6,6 +6,9 @@ import type {
   BookSection,
   Comment,
   ID,
+  NotificationItem,
+  NotificationTab,
+  NotificationTargetType,
   PinDetail,
   Tag,
   User,
@@ -337,6 +340,65 @@ const BOOK_CHAPTER_TOPICS = [
   '总结与展望',
 ] as const
 
+/** 每位用户生成的消息条数 */
+const NOTIFICATION_PER_USER = 16
+
+/** 消息分类抽取池（重复项用于加权，让「赞和收藏」占比最高） */
+const NOTIFICATION_TAB_POOL: readonly NotificationTab[] = [
+  'like',
+  'like',
+  'like',
+  'comment',
+  'comment',
+  'mention',
+  'follow',
+  'system',
+]
+
+/** 「赞和收藏」动作文案 */
+const LIKE_TITLES = ['赞了你的文章', '收藏了你的文章'] as const
+
+/** 系统通知标题池 */
+const SYSTEM_TITLES = [
+  '你的文章已通过审核',
+  '获得「掘金月度优秀作者」',
+  '账号安全提醒',
+  '你关注的技术领域上新了小册',
+  '掘金社区规范更新',
+] as const
+
+/** 系统通知正文池 */
+const SYSTEM_CONTENTS = [
+  '你发布的文章已通过审核，现已对外可见。',
+  '感谢持续输出优质内容，本月创作者激励已发放至账户。',
+  '检测到你的账号在新设备登录，如非本人操作请及时修改密码。',
+  '你关注的技术领域有新小册上架，欢迎前往查看。',
+  '为营造更好的技术交流氛围，社区规范已更新，请查阅详情。',
+] as const
+
+/** 收藏集名称池 */
+const COLLECTION_NAMES = [
+  '前端进阶必读',
+  '源码阅读清单',
+  '性能优化合集',
+  '后端架构设计',
+  'AI 与大模型',
+  '工程化实践',
+  '面试复习资料',
+  '数据库与存储',
+  '云原生运维',
+  '我的技术成长',
+] as const
+
+/** 收藏集描述池 */
+const COLLECTION_DESCRIPTIONS = [
+  '收藏了一批质量不错的技术文章，持续更新中。',
+  '都是精读过的干货，适合系统性地补一补基础。',
+  '工作中遇到问题时翻出来看看，挺有用的。',
+  '整理了一份学习路径，按顺序读效果更好。',
+  '把喜欢的文章归档到这里，方便随时回看。',
+] as const
+
 /* ============================== 生成器 ============================== */
 
 export function toUserBrief(user: User): UserBrief {
@@ -562,6 +624,153 @@ function generateAuthorRank(users: User[]): AuthorRankItem[] {
     }))
 }
 
+/** 消息记录：在 `NotificationItem` 基础上带上收件人（写入 notifications.user_id） */
+export interface NotificationRecord extends NotificationItem {
+  userId: ID
+}
+
+/** 收藏集记录：带上归属用户与收录文章（分别写入 collections / collection_articles） */
+export interface CollectionRecord {
+  id: ID
+  userId: ID
+  name: string
+  description: string
+  cover: string
+  createdAt: string
+  updatedAt: string
+  articleIds: ID[]
+}
+
+/**
+ * 生成消息通知：每位用户各生成一批，触发者从其他用户中抽取。
+ * 赞 / 评论 / @ 优先指向收件人自己的文章，保证文案与内容归属一致。
+ */
+function generateNotifications(
+  rng: Rng,
+  users: User[],
+  articles: ArticleDetail[],
+  pins: PinDetail[],
+): NotificationRecord[] {
+  const records: NotificationRecord[] = []
+  let seq = 0
+
+  for (const recipient of users) {
+    const ownArticles = articles.filter((article) => article.author.id === recipient.id)
+    const actorPool = users.filter((user) => user.id !== recipient.id)
+
+    for (let index = 0; index < NOTIFICATION_PER_USER; index += 1) {
+      seq += 1
+      const tab = pick(rng, NOTIFICATION_TAB_POOL)
+      const actor = toUserBrief(pick(rng, actorPool))
+
+      let targetType: NotificationTargetType = 'none'
+      let targetId: ID = ''
+      let title: string
+      let content = ''
+
+      if (tab === 'system') {
+        title = pick(rng, SYSTEM_TITLES)
+        content = pick(rng, SYSTEM_CONTENTS)
+      } else if (tab === 'follow') {
+        title = '关注了你'
+      } else {
+        // 指向文章（优先收件人自己的文章）或沸点
+        if (rng() < 0.75) {
+          const article = pick(rng, ownArticles.length > 0 ? ownArticles : articles)
+          targetType = 'article'
+          targetId = article.id
+          if (tab === 'like') {
+            title = `${pick(rng, LIKE_TITLES)}《${article.title}》`
+          } else if (tab === 'comment') {
+            title = `评论了你的文章《${article.title}》`
+          } else {
+            title = `在文章《${article.title}》中提到了你`
+          }
+        } else {
+          const pin = pick(rng, pins)
+          targetType = 'pin'
+          targetId = pin.id
+          if (tab === 'like') {
+            title = '赞了你的沸点'
+          } else if (tab === 'comment') {
+            title = '评论了你的沸点'
+          } else {
+            title = '在沸点中提到了你'
+          }
+        }
+
+        if (tab === 'comment') {
+          content = pick(rng, COMMENT_TEXTS)
+        } else if (tab === 'mention') {
+          content = `@${recipient.nickname} ${pick(rng, COMMENT_TEXTS)}`
+        }
+      }
+
+      records.push({
+        id: `notification_${seq}`,
+        userId: recipient.id,
+        tab,
+        actor: tab === 'system' ? null : actor,
+        title,
+        content,
+        targetType,
+        targetId,
+        read: rng() < 0.45,
+        createdAt: isoTime(-(index * 173 + int(rng, 0, 90))),
+      })
+    }
+  }
+
+  return records
+}
+
+/** 生成收藏集：每位用户若干本，每本去重收录一批文章 */
+function generateCollections(
+  rng: Rng,
+  users: User[],
+  articles: ArticleDetail[],
+): CollectionRecord[] {
+  const records: CollectionRecord[] = []
+  let seq = 0
+
+  for (const user of users) {
+    const count = int(rng, 3, 5)
+    const namePool: string[] = [...COLLECTION_NAMES]
+
+    for (let index = 0; index < count; index += 1) {
+      seq += 1
+      const nameIndex = int(rng, 0, namePool.length - 1)
+      const name = namePool.splice(nameIndex, 1)[0] ?? '我的收藏'
+
+      const used = new Set<ID>()
+      const expected = int(rng, 6, 18)
+      const articleIds: ID[] = []
+      while (articleIds.length < expected && articleIds.length < articles.length) {
+        const article = pick(rng, articles)
+        if (used.has(article.id)) continue
+        used.add(article.id)
+        articleIds.push(article.id)
+      }
+
+      // 偏移量为分钟（负值表示过去）：updatedAt 晚于 createdAt
+      const createdOffset = -(index * 2160 + int(rng, 1000, 6000))
+
+      records.push({
+        id: `collection_${seq}`,
+        userId: user.id,
+        name,
+        description: pick(rng, COLLECTION_DESCRIPTIONS),
+        cover: imageUrl(`${name} 收藏集封面，扁平插画风，编号 ${seq}`, 'landscape_4_3'),
+        createdAt: isoTime(createdOffset),
+        updatedAt: isoTime(createdOffset + int(rng, 60, 1000)),
+        articleIds,
+      })
+    }
+  }
+
+  return records
+}
+
 /* ============================== 组装 ============================== */
 
 /** mock 数据生成结果（供 SQLite 持久化层灌入） */
@@ -572,6 +781,8 @@ export interface MockData {
   comments: Comment[]
   tags: Tag[]
   books: BookDetail[]
+  notifications: NotificationRecord[]
+  collections: CollectionRecord[]
   authorRank: AuthorRankItem[]
 }
 
@@ -588,6 +799,8 @@ export function generateMockData(): MockData {
   const comments = generateComments(rng, COMMENT_COUNT, users, articles, pins)
   const tags = generateTags(rng, articles)
   const books = generateBooks(rng, users)
+  const notifications = generateNotifications(rng, users, articles, pins)
+  const collections = generateCollections(rng, users, articles)
 
   // 回填统计字段：作者发文数、内容评论数
   for (const article of articles) {
@@ -612,7 +825,7 @@ export function generateMockData(): MockData {
 
   const authorRank = generateAuthorRank(users)
 
-  return { users, articles, pins, comments, tags, books, authorRank }
+  return { users, articles, pins, comments, tags, books, notifications, collections, authorRank }
 }
 
 /** 文章详情 → 列表项（剥离正文与登录态） */

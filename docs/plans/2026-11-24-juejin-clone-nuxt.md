@@ -236,16 +236,18 @@ juejin/
 
 ### 阶段 9 · 消息中心 / 收藏集
 
-- [ ] 9.1 消息中心各 Tab
-- [ ] 9.2 收藏集列表与详情
-- [ ] 9.3 头部消息铃铛未读角标
+- [x] 9.1 消息中心各 Tab：`shared/types/notification.ts`（`NotificationTab` = 赞和收藏 / 评论 / @我 / 关注 / 系统、`NotificationItem`、`NotificationUnread`）、`shared/constants/notification.ts`（`NOTIFICATION_TABS` / `DEFAULT_NOTIFICATION_TAB` / `isNotificationTab` / `emptyNotificationUnread`）；`server/db` 新增 `notifications` 表 + mock 种子 + `listNotifications` / `countUnreadByTab` / `markNotificationsRead`；接口 `GET /api/notification/list`（Tab + 游标分页）、`GET /api/notification/unread`、`POST /api/notification/read`；`useNotification` + `pages/notification/index.vue`（Tab 与 URL query 同步、Tab 未读角标、全部已读）
+- [x] 9.2 收藏集列表与详情：`shared/types/collection.ts`（`CollectionSummary` / `CollectionDetail`）；`server/db` 新增 `collections` + `collection_articles` 表 + mock 种子 + `listCollections(userId)` / `getCollectionById(id, userId)`；接口 `GET /api/collection/list`、`GET /api/collection/[id]`；`useCollectionList` / `useCollectionDetail` + `pages/collection/index.vue`、`pages/collection/[id].vue`
+- [x] 9.3 头部消息铃铛未读角标：`useNotificationSummary`（未读总数）+ `AppHeader` 铃铛改为 `NuxtLink → /notification` 并叠加未读角标
+- [x] 9.4 登录门控与 SSR 登录态修复：`CommonLoginGate`（一键演示登录，不 emit）；`useRequest` 在 SSR 改用 `useRequestFetch()` 透传 Cookie；登录态变化由页面 `watch(isLoggedIn)` 触发刷新
+- [x] 9.5 lint / typecheck / build / SSR 冒烟校验 + 更新计划文档
 
 ### 阶段 10 · 收尾
 
-- [ ] 10.1 响应式适配（移动端抽屉/单栏）
-- [ ] 10.2 SEO / meta / sitemap
-- [ ] 10.3 404/500 与全局错误处理
-- [ ] 10.4 构建校验（`pnpm build` + `pnpm preview`）与性能自查
+- [ ] 10.1 响应式适配（移动端抽屉 / 单栏）：`AppSidebar` 小屏折叠、导航抽屉、文章详情/编辑器单栏回退
+- [ ] 10.2 SEO / meta / sitemap：`app.vue` 默认 meta、`useSeoMeta` 全覆盖复核、`@nuxtjs/sitemap` 或 `server/routes/sitemap.xml.ts` + `robots.txt`
+- [ ] 10.3 404 / 500 与全局错误处理：`error.vue`、`/404`、`/500`、`useRequest` 失败统一提示
+- [ ] 10.4 构建校验（`pnpm build` + `pnpm preview`）与性能自查：包体、SSR 首屏、图片懒加载
 
 ---
 
@@ -289,7 +291,7 @@ juejin/
 - **环境事件（需知悉）**：`vite-plus` 于本次自动把 pnpm 由 `10.33.0` 升到 `12.23.0`，触发"store 不一致 → 重建 node_modules"并撞上 pnpm 12 默认的 `minimumReleaseAge`（24h）供应链策略，导致 `node_modules` 一度被清空。已通过 `packageManager: pnpm@10.33.0` 固定版本并用 `pnpm install --frozen-lockfile` 恢复，锁文件未改动。
 - **已知取舍（用户决定）**：暂不安装 `@iconify-json/lucide`，图标在浏览器端向 Iconify 在线 API 拉取（需联网；SSR HTML 中不含图标 SVG）。后续若需离线/首屏图标，再补该 devDependency。
 - 备注：`agent.md` 采用社区通用大写命名 `AGENTS.md`（macOS 文件系统不区分大小写）。
-- 待办：阶段 5（用户体系）已由用户决定**暂缓**；阶段 6 剩余 6.3 依赖登录同样暂缓；阶段 8 已完成，剩余阶段 9（消息中心 / 收藏集）、阶段 10（收尾）**待用户指定步骤后执行**。
+- 待办：阶段 5（用户体系）已由用户决定**暂缓**；阶段 6 剩余 6.3 依赖登录同样暂缓；阶段 8 已完成；阶段 9 已完成（9.1 ~ 9.5）；剩余阶段 10（收尾）**待用户指定步骤后执行**。
 - **阶段 7 已完成（7.0 ~ 7.5）**，验证结论：
   - 交付（编辑器）：依赖引入 `bytemd` / `@bytemd/vue-next` / `@bytemd/plugin-gfm` / `@bytemd/plugin-highlight` 并在 `AGENTS.md` 备案；`nuxt.config.ts` 引入 `bytemd/dist/index.css`，`main.css` 新增 `@layer components` 主题适配（`.jj-editor .bytemd` 高度/描边/暗色反相）
   - 交付（前端）：`layouts/editor.vue`（精简顶栏 + 全屏无侧栏）、`pages/editor/index.vue`、`pages/editor/drafts.vue`、`pages/editor/draft/[id].vue`、`pages/creator/index.vue`；组件 `editor/Workspace.vue`（ByteMD `<ClientOnly>` + gfm/highlight + 内联中文 locale + 双栏预览）、`editor/TitleBar.vue`（标题/字数/存草稿/发布）、`editor/PublishPanel.vue`（分类/标签/封面/摘要）、`editor/Form.vue`（组合入口 + 发布设置弹窗 + 演示登录弹窗）、`editor/DraftList.vue`（草稿箱与创作中心共用）、`creator/CreatorOverview.vue`（4 张统计卡 + 近 7 日阅读量柱状图）、`creator/CreatorContentList.vue`（内容管理列表）
@@ -316,3 +318,14 @@ juejin/
   - `pnpm lint` ✅（0 warning / 0 error）· `pnpm typecheck` ✅（exit 0，仅既有 `Duplicated imports` 警告）· `pnpm build` ✅（Client 2.13 MB / gzip 717.05 kB · Server 678.07 kB · Nitro 6.93 MB）
   - SSR 冒烟（node .output，:3500）：`/search?q=前端`、`/tag/前端`、`/rank`、`/books`、`/book/book_1` 均 **HTTP 200** 且标题正确；`/book/nope_404`、`/tag/nope_404` 走兜底页（HTTP 200）；搜索结果直出 `/article/article_*` 链接、标签页直出「N 篇文章 / N 人关注」、排行榜直出「作者榜/文章榜/掘力值」、小册详情直出「目录/已完更/立即购买」；`__NUXT__` 载荷含 `search:*` / `tag-detail:*` / `rank-author` / `rank-article` / `book-list` / `book-detail:book_1`；首页头部含 `/books`、`/rank` 导航与搜索输入框，侧栏热门话题 `href="/tag/*"` ✅
   - 接口冒烟：`GET /api/search?q=低代码&type=all&limit=3`、`GET /api/search?q=前端&type=tag`、`GET /api/book/list?limit=2`、`GET /api/book/book_1`、`GET /api/rank/article`、`GET /api/tag/前端?limit=2` 均 `err_no: 0`，游标 `hasMore/cursor` 正常 ✅
+- **阶段 9 已完成（9.1 ~ 9.5）**，验证结论：
+  - 交付（类型 / 常量）：`shared/types/notification.ts`、`shared/types/collection.ts`；`shared/constants/notification.ts`（`NOTIFICATION_TABS` / `DEFAULT_NOTIFICATION_TAB` / `isNotificationTab` / `getNotificationTabName` / `emptyNotificationUnread`）
+  - 交付（数据层）：`server/mock/seed.ts` 新增 `NOTIFICATION_PER_USER = 16` 的消息种子（赞/评论/@ 优先指向收件人自己的文章，`system` 无 actor，约 45% 生成为未读）与每人 3~5 本收藏集的种子（每本去重收录 6~18 篇）；`server/db/index.ts` 新增 `notifications` / `collections` / `collection_articles` 三表与 `listNotifications` / `countUnreadByTab` / `markNotificationsRead` / `listCollections` / `getCollectionById` 仓储（未登录或非本人收藏集返回 `null`）；种子守卫扩展为「各表 count 为 0 才补灌」，兼容老库
+  - 交付（接口）：`GET /api/notification/list`（`tab` 校验 + 回退默认分类 + 游标分页，未登录返回空页）、`GET /api/notification/unread`（未登录返回 `emptyNotificationUnread()`）、`POST /api/notification/read`（未登录 401，返回最新未读统计）、`GET /api/collection/list`、`GET /api/collection/[id]`
+  - 交付（前端）：`useNotification`（Tab 与 URL query 同步 + 游标追加 + 全部已读）、`useNotificationSummary`、`useCollectionList`、`useCollectionDetail`；组件 `base/Tabs.vue` 增加 `badge`、`common/LoginGate.vue`（一键演示登录门）、`notification/List.vue`、`collection/Card.vue`；页面 `pages/notification/index.vue`、`pages/collection/index.vue`、`pages/collection/[id].vue`；`AppHeader` 新增「收藏集」导航项，铃铛改为 `NuxtLink → /notification` 并叠加未读角标（> 99 显示 `99+`）
+  - **踩坑与修复 1（登录门 emit 被丢弃）**：登录成功后父级 `v-if="!isLoggedIn"` 立即卸载 `LoginGate`，而 Vue 的 `emit` 在实例已卸载时会直接 return，导致「登录后列表仍为空」。修复：登录门不再 `emit`，改由页面 `watch(isLoggedIn)` 触发 `refresh()`（通知页同时刷新未读统计），顺带修复了「从头部登录后页面数据不刷新」的情况。
+  - **踩坑与修复 2（SSR 拿不到登录态）**：`useRequest` 原先直接用全局 `$fetch` 请求内部接口，SSR 下不会带 Cookie，导致「已登录用户刷新登录态页面仍看到登录门 / 头部不显示昵称」。修复：`useRequest` 在 `import.meta.server` 时改用 `useRequestFetch()` 透传入站 Cookie。
+  - `pnpm lint` ✅（0 warning / 0 error；修复 `useCollectionDetail` 的 `no-shadow` 与 `seed.ts` 的 `no-useless-assignment`）· `pnpm typecheck` ✅（exit 0，仅既有 `Duplicated imports` 警告）· `pnpm build` ✅（Client 2.15 MB / gzip 724.70 kB · Server 712.38 kB · Nitro 6.99 MB）
+  - SSR 冒烟（preview:3100）：`/notification`、`/collection`、`/collection/collection_1`、`/collection/nope_404` 均 **HTTP 200**；带 Cookie 时 `/notification` 直出头部昵称、铃铛角标 `9`、消息条目（`收藏了你的文章《用 Rust 重构之后的几点思考》` 等）与 Tab 角标，`/collection` 直出收藏集卡片（`我的技术成长 / 12 篇`）；不带 Cookie 时直出「一键演示登录」门；回归复核 `/`、`/pins`、`/books`、`/rank`、`/article/article_11`、`/book/book_1`、`/creator`、`/search?q=Node` 均 **HTTP 200**
+  - 接口冒烟：未登录 `GET /api/notification/list`、`/api/notification/unread`、`/api/collection/list` 均返回空页/零统计；登录后 `GET /api/notification/unread` = `{ total: 9, byTab: { like: 3, comment: 2, follow: 1, system: 3 } }`，`GET /api/notification/list?tab=like`、`GET /api/collection/list`、`GET /api/collection/collection_1` 正常，`GET /api/collection/nope_404` → `data: null`，`POST /api/notification/read`（先 `tab=like` 后全量）逐级归零 ✅
+  - 浏览器交互冒烟（Chrome DevTools MCP，纯净 profile）：`/collection` 点「一键演示登录」→ 头部显示昵称、收藏集卡片即时渲染；`/notification` 直出角标 `9` + Tab 角标（评论 2 / 关注 1 / 系统 3）+ 未读红点，点「全部已读」→ 头部与 Tab 角标、未读红点、按钮同时消失；`/collection/collection_999` 走「收藏集不存在」兜底；控制台无 error / warn ✅

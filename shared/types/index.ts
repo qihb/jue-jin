@@ -24,3 +24,7 @@ export type {
 export type { PinDetail, PinLikeResult, PinSummary } from './pin'
 
 export type { Comment, CommentListQuery, CommentTargetType } from './comment'
+
+export type { CollectionDetail, CollectionSummary } from './collection'
+
+export type { NotificationItem, NotificationTab, NotificationTargetType, NotificationUnread } from './notification'

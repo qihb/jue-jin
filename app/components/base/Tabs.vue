@@ -2,6 +2,8 @@
 export interface TabItem {
   label: string
   value: string
+  /** 右侧角标数字（如未读数），未传或 <= 0 时不展示 */
+  badge?: number
 }
 
 const props = defineProps<{ items: TabItem[] }>()
@@ -22,6 +24,12 @@ const model = defineModel<string>({ required: true })
       @click="model = item.value"
     >
       {{ item.label }}
+      <span
+        v-if="item.value !== model && item.badge"
+        class="ml-1 rounded-full bg-jj-danger px-1.5 text-xs leading-4 text-white"
+      >
+        {{ item.badge > 99 ? '99+' : item.badge }}
+      </span>
       <span
         v-if="model === item.value"
         class="absolute inset-x-0 -bottom-px h-0.5 rounded bg-jj-primary"
