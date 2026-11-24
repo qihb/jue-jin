@@ -1,0 +1,47 @@
+@import 'tailwindcss';
+
+/* 暗色模式基于 .dark 类（供后续主题切换使用） */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============ 掘金设计 token：组件内禁止写魔法色值 ============ */
+@theme {
+  /* 品牌色 */
+  --color-jj-primary: #1e80ff;
+  --color-jj-primary-hover: #1171ee;
+  --color-jj-primary-light: #eaf2ff;
+
+  /* 文本层级 */
+  --color-jj-text-1: #1d2129;
+  --color-jj-text-2: #4e5969;
+  --color-jj-text-3: #86909c;
+  --color-jj-text-4: #c9cdd4;
+
+  /* 背景与描边 */
+  --color-jj-bg-page: #f4f5f5;
+  --color-jj-bg-card: #ffffff;
+  --color-jj-border: #e5e6eb;
+
+  /* 功能色 */
+  --color-jj-success: #00b42a;
+  --color-jj-warning: #ff7d00;
+  --color-jj-danger: #f53f3f;
+  --color-jj-gold: #ffb800;
+
+  /* 圆角与阴影 */
+  --radius-jj-card: 4px;
+  --shadow-jj-card: 0 1px 2px rgb(0 0 0 / 4%);
+
+  /* 字体 */
+  --font-jj-sans:
+    -apple-system, blinkmacsystemfont, 'Segoe UI', roboto, 'pingfang sc', 'hiragino sans gb',
+    'microsoft yahei', sans-serif;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-jj-sans);
+    color: var(--color-jj-text-1);
+    background-color: var(--color-jj-bg-page);
+    -webkit-font-smoothing: antialiased;
+  }
+}

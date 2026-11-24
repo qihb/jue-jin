@@ -23,6 +23,9 @@
 | 规范 | @nuxt/eslint + Prettier + Oxlint | 提交前必过 |
 | 包管理 | pnpm | 锁定版本，禁用 npm/yarn 生成 lockfile |
 
+> **运行环境**：Node `^22.21.0 || ^24.11.0 || >=26.0.0`（见 `.nvmrc`，当前固定 `24.11.0`）。
+> Node 20 及以下会导致 `eslint` 启动崩溃（缺少 `Object.groupBy`），务必先 `nvm use` 再执行任何命令。
+
 ---
 
 ## 3. 目录职责边界（强约束）

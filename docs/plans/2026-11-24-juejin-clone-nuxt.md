@@ -141,12 +141,12 @@ juejin/
 
 ## 七、执行阶段
 
-### 阶段 0 · 脚手架与工程规范
-- [ ] 0.1 `pnpm dlx nuxi@latest init juejin --packageManager pnpm` 初始化 Nuxt 4 骨架
-- [ ] 0.2 接入 Tailwind v4（`@tailwindcss/vite`）+ 设计 token（`app/assets/css/main.css`）
-- [ ] 0.3 接入 Pinia、VueUse、@nuxt/icon（`nuxt.config.ts` modules）
-- [ ] 0.4 配置 ESLint + Prettier + Oxlint + `tsconfig` strict
-- [ ] 0.5 建立 `app/` `server/` `shared/` 目录骨架与 `AGENTS.md` 对齐校验
+### 阶段 0 · 脚手架与工程规范 ✅
+- [x] 0.1 用 nuxi 官方脚手架初始化 Nuxt 4 骨架（`-t minimal`；非交互终端必须显式 `--template`）
+- [x] 0.2 接入 Tailwind v4（`@tailwindcss/vite`）+ 设计 token（`app/assets/css/main.css`）
+- [x] 0.3 接入 Pinia、VueUse、@nuxt/icon、@nuxt/eslint（`nuxt.config.ts` modules）
+- [x] 0.4 配置 ESLint + Prettier + Oxlint + TypeScript strict，补齐 `lint / format / typecheck` 脚本
+- [x] 0.5 建立 `app/` `server/` `shared/` 目录骨架，以 `/api/health` + 首页自检页完成端到端校验
 
 ### 阶段 1 · 设计系统与全局布局
 - [ ] 1.1 抽取视觉 token（主色 #1e80ff、灰阶、圆角、阴影、字体）
@@ -209,6 +209,10 @@ juejin/
 ---
 
 ## 当前状态
-- 决策已确认；[AGENTS.md](../../AGENTS.md) 与本草案文档已产出。
-- 脚手架（阶段 0）及后续阶段均**待用户指定步骤后执行**。
+- **阶段 0 已完成（0.1 ~ 0.5）**，验证结论：
+  - `pnpm install --frozen-lockfile` ✅ · `pnpm lint`（oxlint + eslint）✅ · `pnpm typecheck` ✅ · `pnpm build` ✅
+  - 运行时冒烟：SSR 输出含 Tailwind token 类名与 CSS 变量、Pinia 状态被序列化、`useAsyncData` 在 SSR 命中 `/api/health`（`err_no: 0`）✅
+- **环境已固化**：Node `24.11.0`（`.nvmrc` + `package.json#engines`）。执行任何命令前需先 `nvm use`——本机默认仍为 `v20.19.1`，Node 20 会让 ESLint 10 因缺少 `Object.groupBy` 直接崩溃。
+- **依赖偏离说明**：`typescript` 固定 `^5.9`（TS 7 超出 vue-tsc / @typescript-eslint 的 peer 范围）；补充 `cssnano` 消除 Nuxt PostCSS 构建告警。
 - 备注：`agent.md` 采用社区通用大写命名 `AGENTS.md`（macOS 文件系统不区分大小写）。
+- 待办：阶段 1 及之后均**待用户指定步骤后执行**。
