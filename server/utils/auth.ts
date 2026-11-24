@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify } from 'jose'
+import type { H3Event } from 'h3'
 import type { UserBrief } from '~~/shared/types'
 
 /** JWT 密钥：优先读环境变量，缺省用开发占位值（生产环境务必通过 env 覆盖） */
@@ -31,4 +32,15 @@ export async function verifyToken(token: string): Promise<string | null> {
   } catch {
     return null
   }
+}
+
+/** 签发 token 并写入 HttpOnly Cookie（登录 / 注册共用） */
+export async function issueAuthCookie(event: H3Event, user: UserBrief): Promise<void> {
+  const token = await signToken(user)
+  setCookie(event, AUTH_COOKIE_NAME, token, {
+    httpOnly: true,
+    path: '/',
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 24 * 7, // 7 天
+  })
 }

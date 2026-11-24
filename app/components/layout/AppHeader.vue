@@ -2,7 +2,7 @@
 import { NAV_ITEMS } from '~~/shared/constants'
 
 const { isDark, toggleTheme } = useTheme()
-const { user, isLoggedIn, loginWithDemo, logout } = useAuth()
+const { user, isLoggedIn, logout } = useAuth()
 const { unread } = await useNotificationSummary()
 const appStore = useAppStore()
 </script>
@@ -53,6 +53,11 @@ const appStore = useAppStore()
           创作者中心
         </BaseButton>
 
+        <BaseButton size="sm" class="hidden sm:inline-flex" @click="navigateTo('/pins/publish')">
+          <Icon name="i-lucide:pen-line" class="size-3.5" />
+          发沸点
+        </BaseButton>
+
         <button
           type="button"
           class="cursor-pointer rounded p-2 text-jj-text-2 transition-colors hover:bg-jj-bg-hover hover:text-jj-primary"
@@ -78,15 +83,28 @@ const appStore = useAppStore()
         </NuxtLink>
 
         <div v-if="isLoggedIn" class="flex items-center gap-2">
-          <BaseAvatar :src="user?.avatar" :size="28" />
-          <span class="hidden max-w-24 truncate text-sm text-jj-text-2 sm:inline">
-            {{ user?.nickname }}
-          </span>
+          <NuxtLink
+            :to="`/user/${user?.id}`"
+            class="flex items-center gap-2 rounded px-1 py-0.5 transition-colors hover:bg-jj-bg-hover"
+          >
+            <BaseAvatar :src="user?.avatar" :size="28" />
+            <span class="hidden max-w-24 truncate text-sm text-jj-text-2 sm:inline">
+              {{ user?.nickname }}
+            </span>
+          </NuxtLink>
+          <NuxtLink
+            to="/settings/profile"
+            class="rounded p-2 text-jj-text-2 transition-colors hover:bg-jj-bg-hover hover:text-jj-primary"
+            title="设置"
+            active-class="text-jj-primary"
+          >
+            <Icon name="i-lucide:settings" class="size-5" />
+          </NuxtLink>
           <BaseButton variant="text" size="sm" class="hidden sm:inline-flex" @click="logout">
             退出
           </BaseButton>
         </div>
-        <BaseButton v-else size="sm" @click="loginWithDemo">登录</BaseButton>
+        <BaseButton v-else size="sm" @click="navigateTo('/login')">登录</BaseButton>
       </div>
     </div>
 

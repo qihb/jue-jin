@@ -26,7 +26,7 @@ const {
   loginRequired,
 } = await useArticleDetail(id)
 
-const { loginWithDemo } = useAuth()
+const { user, loginWithDemo } = useAuth()
 
 const notFound = computed(
   () => status.value === 'error' || (!article.value && status.value !== 'pending'),
@@ -103,7 +103,11 @@ async function handleDemoLogin() {
               <p class="text-sm text-jj-text-1">{{ article.author.nickname }}</p>
               <ArticleMeta :article="article" class="mt-0.5" />
             </div>
-            <BaseButton variant="secondary" size="sm">关注</BaseButton>
+            <UserFollowButton
+              v-if="article.author.id !== user?.id"
+              :user-id="article.author.id"
+              :initial="article.following"
+            />
           </div>
 
           <h1 class="mt-5 text-xl leading-8 font-bold text-jj-text-1 sm:text-2xl sm:leading-9">
@@ -151,7 +155,7 @@ async function handleDemoLogin() {
       </article>
 
       <aside class="flex w-64 shrink-0 flex-col gap-4 max-lg:hidden">
-        <ArticleAuthorCard v-if="author" :author="author" />
+        <ArticleAuthorCard v-if="author" :author="author" :following="article.following" />
         <ArticleToc :items="toc" />
       </aside>
     </div>

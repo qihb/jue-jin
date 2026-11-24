@@ -3,7 +3,7 @@ import { NAV_ITEMS } from '~~/shared/constants'
 
 const route = useRoute()
 const appStore = useAppStore()
-const { user, isLoggedIn, loginWithDemo, logout } = useAuth()
+const { user, isLoggedIn, logout } = useAuth()
 
 /** 抽屉开关直接读 store，由 AppHeader 的汉堡按钮控制 */
 const visible = computed({
@@ -110,24 +110,43 @@ function handleSearch() {
                 {{ item.label }}
               </NuxtLink>
               <NuxtLink
-                to="/creator"
+                to="/pins/publish"
                 class="mt-1 flex items-center gap-3 rounded border-t border-jj-border px-3 py-2.5 pt-3 text-sm text-jj-text-2 transition-colors hover:bg-jj-bg-hover hover:text-jj-primary"
+                active-class="text-jj-primary"
+              >
+                <Icon name="i-lucide:pen-line" class="size-4.5" />
+                发沸点
+              </NuxtLink>
+              <NuxtLink
+                to="/creator"
+                class="flex items-center gap-3 rounded px-3 py-2.5 text-sm text-jj-text-2 transition-colors hover:bg-jj-bg-hover hover:text-jj-primary"
                 active-class="text-jj-primary"
               >
                 <Icon name="i-lucide:pen-square" class="size-4.5" />
                 创作者中心
               </NuxtLink>
+              <NuxtLink
+                v-if="isLoggedIn"
+                to="/settings/profile"
+                class="flex items-center gap-3 rounded px-3 py-2.5 text-sm text-jj-text-2 transition-colors hover:bg-jj-bg-hover hover:text-jj-primary"
+                active-class="text-jj-primary"
+              >
+                <Icon name="i-lucide:settings" class="size-4.5" />
+                设置
+              </NuxtLink>
             </nav>
 
             <footer class="border-t border-jj-border p-4">
               <div v-if="isLoggedIn" class="flex items-center gap-3">
-                <BaseAvatar :src="user?.avatar" :size="36" />
-                <span class="min-w-0 flex-1 truncate text-sm font-medium text-jj-text-1">
-                  {{ user?.nickname }}
-                </span>
+                <NuxtLink :to="`/user/${user?.id}`" class="flex min-w-0 flex-1 items-center gap-3">
+                  <BaseAvatar :src="user?.avatar" :size="36" />
+                  <span class="min-w-0 flex-1 truncate text-sm font-medium text-jj-text-1">
+                    {{ user?.nickname }}
+                  </span>
+                </NuxtLink>
                 <BaseButton variant="secondary" size="sm" @click="logout">退出</BaseButton>
               </div>
-              <BaseButton v-else block size="sm" @click="loginWithDemo">登录</BaseButton>
+              <BaseButton v-else block size="sm" @click="navigateTo('/login')">登录</BaseButton>
             </footer>
           </div>
         </Transition>

@@ -27,7 +27,17 @@ export default defineNuxtConfig({
     // 静态路由由模块从页面文件生成，动态详情页走该数据源
     sources: ['/api/_sitemap-urls'],
     // 需登录的私有页不进 sitemap（与 robots.txt 的 Disallow 保持一致）
-    exclude: ['/creator', '/editor', '/editor/**', '/notification', '/collection', '/collection/**'],
+    exclude: [
+      '/creator',
+      '/editor',
+      '/editor/**',
+      '/notification',
+      '/collection',
+      '/collection/**',
+      '/settings',
+      '/settings/**',
+      '/pins/publish',
+    ],
   },
 
   css: [

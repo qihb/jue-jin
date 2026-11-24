@@ -39,14 +39,16 @@ function itemKey(item: SearchItem): string {
         <ArticleCard v-if="item.type === 'article'" :article="item.article" />
 
         <div v-else-if="item.type === 'user'" class="flex items-center gap-3 px-4 py-4">
-          <BaseAvatar :src="item.user.avatar" :size="40" />
-          <div class="min-w-0 flex-1">
-            <p class="truncate text-sm font-medium text-jj-text-1">{{ item.user.nickname }}</p>
-            <p class="truncate text-xs text-jj-text-3">
-              {{ item.user.description || '@' + item.user.username }}
-            </p>
-          </div>
-          <BaseButton variant="secondary" size="sm">关注</BaseButton>
+          <NuxtLink :to="`/user/${item.user.id}`" class="flex min-w-0 flex-1 items-center gap-3">
+            <BaseAvatar :src="item.user.avatar" :size="40" />
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium text-jj-text-1">{{ item.user.nickname }}</p>
+              <p class="truncate text-xs text-jj-text-3">
+                {{ item.user.description || '@' + item.user.username }}
+              </p>
+            </div>
+          </NuxtLink>
+          <UserFollowButton :user-id="item.user.id" :initial="item.following" />
         </div>
 
         <NuxtLink

@@ -8,7 +8,7 @@ import { DEFAULT_PAGE_SIZE } from '~~/shared/constants'
  * 切换分类时 `key` 变化自动重取第一页，并清空已追加的数据。
  */
 export async function useArticleFeed(category: Ref<string>) {
-  const { data, status } = await useAsyncData(
+  const { data, status, refresh } = await useAsyncData(
     () => `article-feed:${category.value}`,
     () =>
       request<CursorPage<ArticleSummary>>('/api/article/feed', {
@@ -49,5 +49,5 @@ export async function useArticleFeed(category: Ref<string>) {
     }
   }
 
-  return { articles, status, hasMore, loadingMore, loadMore }
+  return { articles, status, hasMore, loadingMore, loadMore, refresh }
 }

@@ -19,7 +19,7 @@ const {
   loginRequired,
 } = await usePinDetail(id)
 
-const { loginWithDemo } = useAuth()
+const { user, loginWithDemo } = useAuth()
 
 const notFound = computed(
   () => status.value === 'error' || (!pin.value && status.value !== 'pending'),
@@ -94,7 +94,11 @@ async function handleDemoLogin() {
             <p class="text-sm text-jj-text-1">{{ pin.author.nickname }}</p>
             <p class="mt-0.5 text-xs text-jj-text-3">{{ formatRelativeTime(pin.createdAt) }}</p>
           </div>
-          <BaseButton variant="secondary" size="sm">关注</BaseButton>
+          <UserFollowButton
+            v-if="pin.author.id !== user?.id"
+            :user-id="pin.author.id"
+            :initial="pin.following"
+          />
         </div>
 
         <p class="mt-4 text-base leading-7 whitespace-pre-line text-jj-text-1">{{ pin.content }}</p>

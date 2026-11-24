@@ -13,6 +13,7 @@ import type {
   Comment,
   CommentTargetType,
   CursorPage,
+  FollowState,
   ID,
   NotificationItem,
   NotificationTab,
@@ -65,7 +66,8 @@ db.exec(`
     follower_count INTEGER NOT NULL DEFAULT 0,
     liked_count INTEGER NOT NULL DEFAULT 0,
     article_count INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    password_hash TEXT NOT NULL DEFAULT ''
   );
 
   CREATE TABLE IF NOT EXISTS articles (
@@ -132,6 +134,14 @@ db.exec(`
     PRIMARY KEY (pin_id, user_id)
   );
 
+  CREATE TABLE IF NOT EXISTS follows (
+    follower_id TEXT NOT NULL,
+    followee_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (follower_id, followee_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_follows_followee ON follows(followee_id);
+
   CREATE TABLE IF NOT EXISTS tags (
     id TEXT PRIMARY KEY,
     name TEXT UNIQUE NOT NULL,
@@ -191,6 +201,14 @@ db.exec(`
     PRIMARY KEY (collection_id, article_id)
   );
 `)
+
+/* ============================== 幂等迁移 ============================== */
+
+// 老库的 users 表在新增列之前已建好：CREATE TABLE IF NOT EXISTS 不会补列，需显式迁移
+const userColumns = db.prepare('PRAGMA table_info(users)').all() as unknown as { name: string }[]
+if (!userColumns.some((column) => column.name === 'password_hash')) {
+  db.exec(`ALTER TABLE users ADD COLUMN password_hash TEXT NOT NULL DEFAULT ''`)
+}
 
 /* ============================== 种子数据 ============================== */
 
@@ -422,6 +440,7 @@ interface UserRow {
   liked_count: number
   article_count: number
   created_at: string
+  password_hash: string
 }
 
 function rowToUser(row: UserRow): User {
@@ -470,7 +489,12 @@ interface ArticleWithAuthorRow extends ArticleRow {
   description: string
 }
 
-function rowToArticleDetail(row: ArticleWithAuthorRow, liked: boolean, collected: boolean): ArticleDetail {
+function rowToArticleDetail(
+  row: ArticleWithAuthorRow,
+  liked: boolean,
+  collected: boolean,
+  following = false,
+): ArticleDetail {
   return {
     id: row.id,
     title: row.title,
@@ -495,6 +519,7 @@ function rowToArticleDetail(row: ArticleWithAuthorRow, liked: boolean, collected
     content: row.content,
     liked,
     collected,
+    following,
   }
 }
 
@@ -517,7 +542,7 @@ interface PinWithAuthorRow extends PinRow {
   description: string
 }
 
-function rowToPinDetail(row: PinWithAuthorRow, liked: boolean): PinDetail {
+function rowToPinDetail(row: PinWithAuthorRow, liked: boolean, following = false): PinDetail {
   return {
     id: row.id,
     content: row.content,
@@ -535,6 +560,7 @@ function rowToPinDetail(row: PinWithAuthorRow, liked: boolean): PinDetail {
     commentCount: row.comment_count,
     createdAt: row.created_at,
     liked,
+    following,
   }
 }
 
@@ -615,21 +641,36 @@ const ARTICLE_SELECT = `
   JOIN users u ON u.id = a.author_id
 `
 
-/** 文章流：按分类过滤 + 游标分页（cursor = 偏移量） */
+/** 文章流：按分类过滤 + 游标分页（cursor = 偏移量）；`follow` 流按关注关系过滤，未登录为空 */
 export function listArticles(
   params: { category: string; limit: number; cursor: string },
   userId: ID | null,
 ): CursorPage<ArticleSummary> {
   const { category, limit, cursor } = params
   const offset = Number.parseInt(cursor, 10) || 0
-
-  const isAggregate = category === 'recommend' || category === 'follow'
-  const where = isAggregate ? '' : 'WHERE a.category_id = ?'
   const order = 'ORDER BY a.created_at DESC'
 
-  const rows = db
-    .prepare(`${ARTICLE_SELECT} ${where} ${order} LIMIT ? OFFSET ?`)
-    .all(...(isAggregate ? [limit + 1, offset] : [category, limit + 1, offset])) as unknown as ArticleWithAuthorRow[]
+  let rows: ArticleWithAuthorRow[]
+
+  if (category === 'follow') {
+    // 未登录没有关注关系，直接返回空列表
+    if (!userId) {
+      return { list: [], cursor: '', hasMore: false }
+    }
+    rows = db
+      .prepare(
+        `${ARTICLE_SELECT} JOIN follows f ON f.followee_id = a.author_id AND f.follower_id = ? ${order} LIMIT ? OFFSET ?`,
+      )
+      .all(userId, limit + 1, offset) as unknown as ArticleWithAuthorRow[]
+  } else if (category === 'recommend') {
+    rows = db
+      .prepare(`${ARTICLE_SELECT} ${order} LIMIT ? OFFSET ?`)
+      .all(limit + 1, offset) as unknown as ArticleWithAuthorRow[]
+  } else {
+    rows = db
+      .prepare(`${ARTICLE_SELECT} WHERE a.category_id = ? ${order} LIMIT ? OFFSET ?`)
+      .all(category, limit + 1, offset) as unknown as ArticleWithAuthorRow[]
+  }
 
   const hasMore = rows.length > limit
   const list = rows.slice(0, limit).map((row) =>
@@ -648,7 +689,12 @@ export function getArticleById(id: ID, userId: ID | null): ArticleDetail | null 
     .prepare(`${ARTICLE_SELECT} WHERE a.id = ?`)
     .get(id) as ArticleWithAuthorRow | undefined
   if (!row) return null
-  return rowToArticleDetail(row, isArticleLiked(id, userId), isArticleCollected(id, userId))
+  return rowToArticleDetail(
+    row,
+    isArticleLiked(id, userId),
+    isArticleCollected(id, userId),
+    isFollowing(userId, row.author_id),
+  )
 }
 
 export function listRecommendArticles(id: ID, limit: number, userId: ID | null): ArticleSummary[] {
@@ -698,6 +744,29 @@ export function listArticlesByAuthor(
   return { list, cursor: hasMore ? String(offset + limit) : '', hasMore }
 }
 
+/** 某用户赞过的文章：按点赞时间倒序游标分页 */
+export function listLikedArticles(
+  userId: ID,
+  params: { limit: number; cursor: string },
+  viewerId: ID | null,
+): CursorPage<ArticleSummary> {
+  const { limit, cursor } = params
+  const offset = Number.parseInt(cursor, 10) || 0
+
+  const rows = db
+    .prepare(
+      `${ARTICLE_SELECT} JOIN article_likes al ON al.article_id = a.id AND al.user_id = ? ORDER BY a.created_at DESC LIMIT ? OFFSET ?`,
+    )
+    .all(userId, limit + 1, offset) as unknown as ArticleWithAuthorRow[]
+
+  const hasMore = rows.length > limit
+  const list = rows.slice(0, limit).map((row) =>
+    toArticleSummary(rowToArticleDetail(row, isArticleLiked(row.id, viewerId), isArticleCollected(row.id, viewerId))),
+  )
+
+  return { list, cursor: hasMore ? String(offset + limit) : '', hasMore }
+}
+
 /* ============================== 沸点 ============================== */
 
 const PIN_SELECT = `
@@ -726,7 +795,26 @@ export function listPins(
 export function getPinById(id: ID, userId: ID | null): PinDetail | null {
   const row = db.prepare(`${PIN_SELECT} WHERE p.id = ?`).get(id) as PinWithAuthorRow | undefined
   if (!row) return null
-  return rowToPinDetail(row, isPinLiked(id, userId))
+  return rowToPinDetail(row, isPinLiked(id, userId), isFollowing(userId, row.author_id))
+}
+
+/** 某用户发布的沸点：按时间倒序游标分页 */
+export function listPinsByAuthor(
+  authorId: ID,
+  params: { limit: number; cursor: string },
+  userId: ID | null,
+): CursorPage<PinDetail> {
+  const { limit, cursor } = params
+  const offset = Number.parseInt(cursor, 10) || 0
+
+  const rows = db
+    .prepare(`${PIN_SELECT} WHERE p.author_id = ? ORDER BY p.created_at DESC LIMIT ? OFFSET ?`)
+    .all(authorId, limit + 1, offset) as unknown as PinWithAuthorRow[]
+
+  const hasMore = rows.length > limit
+  const list = rows.slice(0, limit).map((row) => rowToPinDetail(row, isPinLiked(row.id, userId)))
+
+  return { list, cursor: hasMore ? String(offset + limit) : '', hasMore }
 }
 
 /* ============================== 评论 ============================== */
@@ -804,6 +892,70 @@ export function listAuthorRank(): AuthorRankItem[] {
     power: row.power,
     trend: Math.floor((row.power + index * 37) % 500),
   }))
+}
+
+/* ============================== 关注 ============================== */
+
+/** 是否已关注（未登录恒为 false） */
+export function isFollowing(followerId: ID | null, followeeId: ID): boolean {
+  if (!followerId) return false
+  const row = db
+    .prepare('SELECT 1 AS v FROM follows WHERE follower_id = ? AND followee_id = ?')
+    .get(followerId, followeeId) as { v: number } | undefined
+  return !!row
+}
+
+/** 某用户的关注列表：按关注时间倒序游标分页 */
+export function listFollowings(
+  userId: ID,
+  params: { limit: number; cursor: string },
+): CursorPage<UserBrief> {
+  const { limit, cursor } = params
+  const offset = Number.parseInt(cursor, 10) || 0
+
+  const rows = db
+    .prepare(
+      `SELECT u.* FROM follows f JOIN users u ON u.id = f.followee_id
+       WHERE f.follower_id = ? ORDER BY f.created_at DESC LIMIT ? OFFSET ?`,
+    )
+    .all(userId, limit + 1, offset) as unknown as UserRow[]
+
+  const hasMore = rows.length > limit
+  const list = rows.slice(0, limit).map((row) => toUserBrief(rowToUser(row)))
+
+  return { list, cursor: hasMore ? String(offset + limit) : '', hasMore }
+}
+
+/** 关注 / 取关：同步维护双方关注数，返回目标用户的最新关注态 */
+export function toggleFollow(followerId: ID, followeeId: ID): FollowState {
+  const followerCountOf = (): number =>
+    (db.prepare('SELECT follower_count FROM users WHERE id = ?').get(followeeId) as { follower_count: number })
+      .follower_count
+
+  // 不允许关注自己：直接返回当前态
+  if (followerId === followeeId) {
+    return { userId: followeeId, following: false, followerCount: followerCountOf() }
+  }
+
+  const existing = db
+    .prepare('SELECT 1 AS v FROM follows WHERE follower_id = ? AND followee_id = ?')
+    .get(followerId, followeeId) as { v: number } | undefined
+
+  if (existing) {
+    db.prepare('DELETE FROM follows WHERE follower_id = ? AND followee_id = ?').run(followerId, followeeId)
+    db.prepare('UPDATE users SET follower_count = MAX(0, follower_count - 1) WHERE id = ?').run(followeeId)
+    db.prepare('UPDATE users SET follow_count = MAX(0, follow_count - 1) WHERE id = ?').run(followerId)
+  } else {
+    db.prepare('INSERT OR IGNORE INTO follows (follower_id, followee_id, created_at) VALUES (?, ?, ?)').run(
+      followerId,
+      followeeId,
+      new Date().toISOString(),
+    )
+    db.prepare('UPDATE users SET follower_count = follower_count + 1 WHERE id = ?').run(followeeId)
+    db.prepare('UPDATE users SET follow_count = follow_count + 1 WHERE id = ?').run(followerId)
+  }
+
+  return { userId: followeeId, following: !existing, followerCount: followerCountOf() }
 }
 
 /* ============================== 标签 ============================== */
@@ -1170,6 +1322,37 @@ export function createArticle(
   return toArticleSummary(detail)
 }
 
+let pinSeq = 0
+
+/** 发布沸点：返回创建后的沸点详情 */
+export function createPin(
+  params: { content: string; images: string[]; topics: string[] },
+  authorId: ID,
+): PinDetail {
+  pinSeq += 1
+  const id = `pin_new_${Date.now().toString(36)}_${pinSeq}`
+  const createdAt = new Date().toISOString()
+
+  const author = db.prepare('SELECT * FROM users WHERE id = ?').get(authorId) as UserRow | undefined
+  if (!author) throw new Error('用户不存在')
+
+  db.prepare(
+    `INSERT INTO pins (id, content, images, topics, author_id, like_count, comment_count, created_at)
+     VALUES (?, ?, ?, ?, ?, 0, 0, ?)`,
+  ).run(
+    id,
+    params.content,
+    JSON.stringify(params.images),
+    JSON.stringify(params.topics),
+    authorId,
+    createdAt,
+  )
+
+  const detail = getPinById(id, authorId)
+  if (!detail) throw new Error('沸点创建失败')
+  return detail
+}
+
 /* ============================== 消息通知 ============================== */
 
 const NOTIFICATION_SELECT = `
@@ -1303,8 +1486,8 @@ function rowToCollectionSummary(row: CollectionRow): CollectionSummary {
   }
 }
 
-/** 当前用户的收藏集列表：按更新时间倒序游标分页 */
-export function listCollections(
+/** 指定用户的收藏集列表：按更新时间倒序游标分页（收藏集公开可读） */
+export function listCollectionsByUser(
   userId: ID,
   params: { limit: number; cursor: string },
 ): CursorPage<CollectionSummary> {
@@ -1321,17 +1504,13 @@ export function listCollections(
   return { list, cursor: hasMore ? String(offset + limit) : '', hasMore }
 }
 
-/** 收藏集详情：概要 + 收录文章（游标分页）。非本人收藏集返回 null */
+/** 收藏集详情：概要 + 收录文章（游标分页）。收藏集公开可读，不存在返回 null */
 export function getCollectionById(
   id: ID,
   userId: ID | null,
   params: { limit: number; cursor: string },
 ): CollectionDetail | null {
-  if (!userId) return null
-
-  const row = db.prepare(`${COLLECTION_SELECT} WHERE c.id = ? AND c.user_id = ?`).get(id, userId) as
-    | CollectionRow
-    | undefined
+  const row = db.prepare(`${COLLECTION_SELECT} WHERE c.id = ?`).get(id) as CollectionRow | undefined
   if (!row) return null
 
   const { limit, cursor } = params
@@ -1400,4 +1579,66 @@ export function createUser(params: {
   const user = getUserById(params.id)
   if (!user) throw new Error('用户创建失败')
   return user
+}
+
+/** 注册建号：用户名 + 昵称 + 密码哈希（密码哈希由上层 `server/utils/password` 生成） */
+export function createUserWithPassword(params: {
+  username: string
+  nickname: string
+  passwordHash: string
+}): User {
+  const now = new Date().toISOString()
+  const id = `user_new_${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`
+
+  db.prepare(
+    `INSERT INTO users (id, username, nickname, avatar, level, description, email, job, company, power, follow_count, follower_count, liked_count, article_count, created_at, password_hash)
+     VALUES (?, ?, ?, '', 1, '', '', '', '', 0, 0, 0, 0, 0, ?, ?)`,
+  ).run(id, params.username, params.nickname, now, params.passwordHash)
+
+  const user = getUserById(id)
+  if (!user) throw new Error('用户创建失败')
+  return user
+}
+
+/** 取密码哈希（未设置密码时为空串） */
+export function getPasswordHash(userId: ID): string | null {
+  const row = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(userId) as
+    | { password_hash: string }
+    | undefined
+  return row ? row.password_hash : null
+}
+
+/** 修改密码 */
+export function updateUserPassword(userId: ID, passwordHash: string): void {
+  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, userId)
+}
+
+/** 更新个人资料：仅覆盖传入的字段，返回更新后的用户 */
+export function updateUserProfile(
+  userId: ID,
+  params: {
+    nickname?: string
+    avatar?: string
+    job?: string
+    company?: string
+    description?: string
+    email?: string
+  },
+): User | null {
+  const current = getUserById(userId)
+  if (!current) return null
+
+  db.prepare(
+    `UPDATE users SET nickname = ?, avatar = ?, job = ?, company = ?, description = ?, email = ? WHERE id = ?`,
+  ).run(
+    params.nickname ?? current.nickname,
+    params.avatar ?? current.avatar,
+    params.job ?? current.job,
+    params.company ?? current.company,
+    params.description ?? current.description,
+    params.email ?? current.email,
+    userId,
+  )
+
+  return getUserById(userId)
 }

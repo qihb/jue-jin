@@ -1,19 +1,36 @@
 import type { ApiResp, UserBrief } from '~~/shared/types'
-import { createUser, getUserByUsername } from '../../db'
+import { createUser, getPasswordHash, getUserByUsername } from '../../db'
 import { toUserBrief } from '../../mock/seed'
-import { AUTH_COOKIE_NAME, signToken } from '../../utils/auth'
-import { ok } from '../../utils/resp'
+import { issueAuthCookie } from '../../utils/auth'
+import { verifyPassword } from '../../utils/password'
+import { fail, ok } from '../../utils/resp'
 
 /**
- * 演示登录：一键登录为固定演示账号 `juejin_1`（不存在则创建）。
- * 后续可扩展为账号密码 / OAuth。
+ * 登录：带 `username` / `password` 时走真实密码校验；
+ * 无 body 时保持原有「一键演示登录」（登录为固定演示账号 `juejin_1`）。
  */
 export default defineEventHandler(async (event): Promise<ApiResp<UserBrief>> => {
+  const body = await readBody<{ username?: string; password?: string } | undefined>(event).catch(
+    () => undefined,
+  )
+  const username = body?.username?.trim()
+  const password = body?.password
+
+  // 账号密码登录
+  if (username && password) {
+    const user = getUserByUsername(username)
+    const stored = user ? getPasswordHash(user.id) : null
+    if (!user || !stored || !verifyPassword(password, stored)) {
+      return fail('用户名或密码错误', 401)
+    }
+    const brief = toUserBrief(user)
+    await issueAuthCookie(event, brief)
+    return ok(brief)
+  }
+
+  // 一键演示登录
   const DEMO_USERNAME = 'juejin_1'
-
   let user = getUserByUsername(DEMO_USERNAME)
-
-  // 演示账号不存在时创建（兜底：数据库被清空等场景）
   if (!user) {
     user = createUser({
       id: 'user_demo',
@@ -25,13 +42,6 @@ export default defineEventHandler(async (event): Promise<ApiResp<UserBrief>> => 
   }
 
   const brief = toUserBrief(user)
-  const token = await signToken(brief)
-  setCookie(event, AUTH_COOKIE_NAME, token, {
-    httpOnly: true,
-    path: '/',
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7, // 7 天
-  })
-
+  await issueAuthCookie(event, brief)
   return ok(brief)
 })

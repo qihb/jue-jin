@@ -4,5 +4,7 @@ Disallow: /creator
 Disallow: /editor
 Disallow: /notification
 Disallow: /collection
+Disallow: /settings
+Disallow: /pins/publish
 
 Sitemap: http://121.43.208.113:3000/sitemap.xml

@@ -36,6 +36,8 @@ export interface ArticleDetail extends ArticleSummary {
   liked: boolean
   /** 当前登录用户是否已收藏 */
   collected: boolean
+  /** 当前登录用户是否已关注作者 */
+  following: boolean
 }
 
 /** 文章流查询参数 */

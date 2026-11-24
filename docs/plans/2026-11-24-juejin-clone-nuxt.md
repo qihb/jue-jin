@@ -189,16 +189,16 @@ juejin/
 
 ### 阶段 5 · 用户体系
 
-- [x] 5.1 登录鉴权 + token 持久化（演示账号一键登录 → 真实 JWT HttpOnly Cookie，见部署计划）；独立登录/注册页待开发
+- [x] 5.1 登录鉴权 + token 持久化（演示账号一键登录 → 真实 JWT HttpOnly Cookie，见部署计划；独立登录/注册页已落地，见 [用户体系计划](./2026-11-24-user-system-and-pin-publish.md)）
 - [x] 5.2 `middleware/auth` 路由守卫（Nitro 中间件解析 JWT，交互接口未登录返回 401）
-- [ ] 5.3 用户主页（文章/沸点/收藏/赞过/关注 Tab）
-- [ ] 5.4 个人设置页
+- [x] 5.3 用户主页（文章/沸点/收藏/赞过/关注 Tab）
+- [x] 5.4 个人设置页
 
 ### 阶段 6 · 沸点
 
 - [x] 6.1 沸点列表 + 分页
 - [x] 6.2 沸点详情 + 评论
-- [ ] 6.3 发布沸点（文本 + 图片 + 话题）——暂缓，依赖登录体系
+- [x] 6.3 发布沸点（文本 + 图片 + 话题）
 
 ### 阶段 7 · 编辑器与创作中心
 
@@ -346,3 +346,12 @@ juejin/
     - SEO：文章页直出 `canonical=http://121.43.208.113:3000/article/article_1`、`og:title` 为文章标题、`description` 为文章摘要 ✅
     - 性能自查：首屏 HTML `/` 60.5 KB / `/article/article_1` 50.8 KB / `/pins` 56.3 KB / `/books` 60.2 KB；SSR TTFB ≈ 4.7 ms；客户端最大 chunk 880 KB（含 Vue 运行时）、次大 628 KB（ByteMD 编辑器，按路由懒加载）、另 252 KB / 140 KB；图片懒加载首页 **20/20** ✅
     - 浏览器交互冒烟（Chrome DevTools MCP，纯净 profile，指向生产 preview）：`390×844` 下头部横向导航隐藏（可见项 0）、汉堡按钮可见，点击后抽屉直出 `掘金 / 首页 / 沸点 / 小册 / 收藏集 / 排行榜 / 创作者中心 / 登录`，`body` 滚动锁生效，点遮罩可关闭；`1280×900` 下横向导航 5 项恢复可见、汉堡隐藏、右栏可见；劫持 `fetch` 制造接口失败后点击分类 Tab，Toast 弹出 `网络异常，请稍后重试`；控制台无 hydration / Vue 运行时报错 ✅
+- **阶段 5.1 尾项 / 5.3 / 5.4 / 6.3 已完成**（落地计划见 [用户体系（主页 / 设置 / 登录注册）+ 发布沸点](./2026-11-24-user-system-and-pin-publish.md)，该计划阶段 0 ~ 6 已全部勾选）：
+  - **登录真实化（5.1 尾项）**：`POST /api/auth/register`（用户名 4~20 位 + 昵称 + 密码 ≥ 6，`node:crypto` scrypt 哈希落库）、`POST /api/auth/password`（校验旧密码）、`app/pages/login.vue` / `register.vue`；`/api/auth/login` 兼容「带账号密码校验」与「无 body 一键演示登录」两种模式，演示登录保留
+  - **用户主页（5.3）**：`GET /api/user/[id]` 返回 `UserProfile`（含 `following`），新增 `GET /api/user/[id]/{articles,pins,collections,likes,following}` 游标分页接口；`POST /api/user/follow` 关注/取关；`app/pages/user/[id].vue` 五 Tab（文章/沸点/收藏集/赞过/关注），Tab 与 URL query 双向同步
+  - **关注体系**：新增 `follows` 表 + `toggleFollow`，首页「关注」流按真实关注关系过滤（`/api/article/feed?category=follow`），未登录显示登录门；文章详情 / 沸点详情作者位、搜索结果用户项统一走 `UserFollowButton`（`useFollow` + 登录拦截）
+  - **个人设置（5.4）**：`POST /api/user/profile`（昵称/头像/职位/公司/简介/邮箱，保存后同步登录态昵称头像）；`app/pages/settings/profile.vue`（资料编辑）、`app/pages/settings/account.vue`（掘金号/注册时间/修改密码/退出登录，手机绑定「暂不支持」占位）；`app/components/settings/Nav.vue` 侧栏导航；两页均挂 `middleware/auth`
+  - **发布沸点（6.3）**：`POST /api/pin/publish`（正文必填、图片 ≤ 9、话题 ≤ 5、未登录 401）；`app/components/pin/PublishForm.vue`（正文 + 字数统计、图片 URL 多行 + 预览 + 删除、话题推荐选择 / 自由输入）；`app/pages/pins/publish.vue`（挂 `middleware/auth`，发布成功跳 `/pin/[id]`）；入口：头部「发沸点」按钮 + 抽屉项 + 沸点列表页发布入口
+  - 连带改动：`nuxt.config.ts#sitemap.exclude` 与 `public/robots.txt` 纳入 `/settings`、`/settings/**`、`/pins/publish`
+  - 验证（preview:3100）：`pnpm lint` ✅（0 warning / 0 error）· `pnpm typecheck` ✅（exit 0）· `pnpm build` ✅（Client 2.20 MB / gzip 741.73 kB · Nitro 7.57 MB）；接口冒烟（注册→登录→关注→发沸点→改资料→改密码）全 `err_no: 0`；私有页未登录 302 → `/login?redirect=…`，带 Cookie 200 ✅
+- **计划内全部阶段（0 ~ 10）已完成**：阶段 8（搜索/标签/排行/小册）、阶段 9（消息中心/收藏集）、阶段 10（收尾）与本次用户体系收尾均已落地，无遗留待办。

@@ -492,9 +492,10 @@ function generateArticles(rng: Rng, count: number, users: User[]): ArticleDetail
       createdAt: isoTime(-(index * 137 + int(rng, 0, 120))),
       isHot: rng() < 0.2,
       content: buildContent(rng, title, topic),
-      // liked / collected 为「当前登录用户」的交互态，持久化层按用户关系表计算，种子不预设
+      // liked / collected / following 为「当前登录用户」的交互态，持久化层按用户关系表计算，种子不预设
       liked: false,
       collected: false,
+      following: false,
     })
   }
   return articles
@@ -515,6 +516,7 @@ function generatePins(rng: Rng, count: number, users: User[]): PinDetail[] {
       commentCount: 0,
       createdAt: isoTime(-(index * 91 + int(rng, 0, 60))),
       liked: false,
+      following: false,
     })
   }
   return pins

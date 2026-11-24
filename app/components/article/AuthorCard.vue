@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { UserBrief } from '~~/shared/types'
 
-const props = defineProps<{ author: UserBrief }>()
+const props = defineProps<{ author: UserBrief; following?: boolean }>()
 </script>
 
 <template>
@@ -12,7 +12,7 @@ const props = defineProps<{ author: UserBrief }>()
         <p class="truncate text-sm font-medium text-jj-text-1">{{ props.author.nickname }}</p>
         <p class="mt-0.5 truncate text-xs text-jj-text-3">掘友等级 Lv{{ props.author.level }}</p>
       </div>
-      <BaseButton size="sm">关注</BaseButton>
+      <UserFollowButton :user-id="props.author.id" :initial="props.following" />
     </div>
     <p class="mt-3 text-xs leading-5 text-jj-text-3">{{ props.author.description }}</p>
   </section>

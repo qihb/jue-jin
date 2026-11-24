@@ -1,6 +1,6 @@
 export type { ApiResp, CursorPage, CursorParams, CursorQuery, ID } from './common'
 
-export type { AuthorRankItem, FollowState, User, UserBrief } from './user'
+export type { AuthorRankItem, FollowState, User, UserBrief, UserProfile, UserProfileTab } from './user'
 
 export type { Category, Tag, TagDetail } from './tag'
 
@@ -21,7 +21,7 @@ export type {
   SearchUserItem,
 } from './search'
 
-export type { PinDetail, PinLikeResult, PinSummary } from './pin'
+export type { PinDetail, PinLikeResult, PinPublishPayload, PinSummary } from './pin'
 
 export type { Comment, CommentListQuery, CommentTargetType } from './comment'
 

@@ -14,6 +14,8 @@ export interface SearchArticleItem {
 export interface SearchUserItem {
   type: 'user'
   user: UserBrief
+  /** 当前登录用户是否已关注该用户 */
+  following: boolean
 }
 
 export interface SearchTagItem {

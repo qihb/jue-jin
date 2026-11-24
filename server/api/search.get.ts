@@ -1,6 +1,6 @@
 import type { ApiResp, CursorPage, SearchItem, SearchType } from '~~/shared/types'
 import { DEFAULT_SEARCH_TYPE, isSearchType } from '~~/shared/constants'
-import { searchArticles, searchBooks, searchTags, searchUsers } from '~~/server/db'
+import { searchArticles, searchBooks, searchTags, searchUsers, isFollowing } from '~~/server/db'
 import { normalizeCursorQuery, ok, paginate } from '~~/server/utils/resp'
 
 /**
@@ -25,7 +25,13 @@ export default defineEventHandler((event): ApiResp<CursorPage<SearchItem>> => {
     )
   }
   if (type === 'all' || type === 'user') {
-    items.push(...searchUsers(keyword).map((user) => ({ type: 'user' as const, user })))
+    items.push(
+      ...searchUsers(keyword).map((user) => ({
+        type: 'user' as const,
+        user,
+        following: isFollowing(userId, user.id),
+      })),
+    )
   }
   if (type === 'all' || type === 'tag') {
     items.push(...searchTags(keyword).map((tag) => ({ type: 'tag' as const, tag })))

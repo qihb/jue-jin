@@ -45,6 +45,15 @@ export interface FollowState {
   followerCount: number
 }
 
+/** 用户主页 Tab 标识 */
+export type UserProfileTab = 'articles' | 'pins' | 'collections' | 'likes' | 'following'
+
+/** 用户主页资料：完整资料 + 当前登录用户的关注态 */
+export interface UserProfile extends User {
+  /** 当前登录用户是否已关注该用户（未登录恒为 false） */
+  following: boolean
+}
+
 /** 作者榜条目 */
 export interface AuthorRankItem {
   /** 名次，从 1 开始 */
