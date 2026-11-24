@@ -6,7 +6,7 @@ const { keyword, type, results, status, hasMore, loadingMore, loadMore, setType 
 
 const tabs = SEARCH_TYPES.map((item) => ({ label: item.name, value: item.id }))
 
-useSeoMeta({
+usePageSeo({
   title: () => (keyword.value ? `${keyword.value} - 搜索结果 - 掘金` : '搜索 - 掘金'),
   description: '掘金搜索 · 一站式检索文章、用户、标签与小册。',
 })

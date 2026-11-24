@@ -8,7 +8,7 @@ const activeTab = ref('author')
 
 const { authors, articles, status } = await useRank()
 
-useSeoMeta({
+usePageSeo({
   title: '排行榜 - 掘金',
   description: '掘金排行榜 · 作者掘力榜与热门文章榜，发现社区里的优质创作者与内容。',
 })

@@ -25,7 +25,7 @@ const notFound = computed(
   () => status.value === 'error' || (!pin.value && status.value !== 'pending'),
 )
 
-useSeoMeta({
+usePageSeo({
   title: () => (pin.value ? `沸点 - ${pin.value.author.nickname} - 掘金` : '沸点详情 - 掘金'),
   description: () => pin.value?.content.slice(0, 80) ?? '掘金技术社区 · 沸点详情页',
 })

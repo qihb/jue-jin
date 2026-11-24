@@ -2,7 +2,7 @@
 const { category, setCategory } = useFeedCategory()
 const { articles, status, hasMore, loadingMore, loadMore } = await useArticleFeed(category)
 
-useSeoMeta({
+usePageSeo({
   title: '掘金 - 一个帮助开发者成长的社区',
   description:
     '掘金复刻 · 首页内容流，覆盖前端、后端、Android、iOS、人工智能、开发工具等领域的技术文章。',

@@ -12,17 +12,38 @@ export interface RequestOptions {
   headers?: Record<string, string>
 }
 
+/** 提取可展示的错误信息：优先响应体里的 `err_msg`，否则给通用文案（避免把技术细节透给用户） */
+function extractErrorMessage(error: unknown): string {
+  if (error && typeof error === 'object') {
+    const data = (error as Record<string, unknown>).data
+    if (data && typeof data === 'object') {
+      const errMsg = (data as Record<string, unknown>).err_msg
+      if (typeof errMsg === 'string' && errMsg) return errMsg
+    }
+  }
+  return '网络异常，请稍后重试'
+}
+
 /**
  * 统一请求封装：集中解包 `{ err_no, err_msg, data }`。
  * `err_no !== 0` 时抛出异常，调用方直接拿到业务数据。
+ * 失败时统一弹全局 Toast（SSR 阶段自动跳过），并抛出异常交给上层处理。
  * SSR 下改用 `useRequestFetch`，把入站 Cookie 透传给内部接口，才能拿到真实登录态。
  */
 export async function request<T>(url: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', query, body, headers } = options
   const fetcher = import.meta.server ? useRequestFetch() : $fetch
-  const resp = await fetcher<ApiResp<T>>(url, { method, query, body, headers })
+
+  let resp: ApiResp<T>
+  try {
+    resp = await fetcher<ApiResp<T>>(url, { method, query, body, headers })
+  } catch (error) {
+    pushToast(extractErrorMessage(error))
+    throw error
+  }
 
   if (resp.err_no !== 0) {
+    pushToast(resp.err_msg || '请求失败')
     throw createError({ statusMessage: resp.err_msg, data: resp })
   }
   return resp.data

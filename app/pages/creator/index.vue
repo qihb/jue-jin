@@ -9,7 +9,7 @@ const TABS = [
   { label: '草稿列表', value: 'drafts' },
 ]
 
-useSeoMeta({
+usePageSeo({
   title: '创作者中心 - 掘金',
   description: '掘金创作中心 · 数据概览、内容管理与草稿列表。',
 })

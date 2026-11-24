@@ -23,6 +23,7 @@
     "@bytemd/plugin-highlight": "^1.22.0",
     "@bytemd/vue-next": "^1.22.0",
     "@nuxt/icon": "^2.6.3",
+    "@nuxtjs/sitemap": "9.1.0",
     "@pinia/nuxt": "^1.0.3",
     "@vueuse/core": "^15.1.0",
     "@vueuse/nuxt": "^15.1.0",

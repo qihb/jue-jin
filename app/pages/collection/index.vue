@@ -8,7 +8,7 @@ watch(isLoggedIn, async (loggedIn) => {
   await refresh()
 })
 
-useSeoMeta({
+usePageSeo({
   title: '我的收藏集 - 掘金',
   description: '掘金收藏集 · 按主题归类的文章合集，随时回顾。',
 })

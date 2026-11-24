@@ -27,7 +27,7 @@ const boxStyle = computed(() => ({
     :class="round ? 'rounded-full' : 'rounded'"
     :style="boxStyle"
   >
-    <img v-if="src" :src="src" :alt="alt" class="size-full object-cover" >
+    <img v-if="src" :src="src" :alt="alt" class="size-full object-cover" loading="lazy" >
     <Icon v-else name="i-lucide:user" class="size-1/2" />
   </span>
 </template>

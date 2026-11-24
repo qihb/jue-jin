@@ -1,7 +1,7 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'editor' })
 
-useSeoMeta({
+usePageSeo({
   title: '草稿箱 - 掘金',
   description: '掘金创作中心 · 本地草稿列表，支持继续编辑与删除。',
 })

@@ -8,7 +8,7 @@ const notFound = computed(
   () => status.value === 'error' || (!tag.value && status.value !== 'pending'),
 )
 
-useSeoMeta({
+usePageSeo({
   title: () => (tag.value ? `${tag.value.name} - 标签 - 掘金` : '标签 - 掘金'),
   description: () => tag.value?.description || '掘金标签页 · 探索同一技术方向下的优质文章。',
 })

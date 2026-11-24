@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const { books, status, hasMore, loadingMore, loadMore } = await useBookList()
 
-useSeoMeta({
+usePageSeo({
   title: '小册 - 掘金',
   description: '掘金小册 · 体系化的技术专栏，跟随作者系统学习一门技术。',
 })

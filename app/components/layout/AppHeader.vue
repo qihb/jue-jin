@@ -1,20 +1,24 @@
 <script setup lang="ts">
+import { NAV_ITEMS } from '~~/shared/constants'
+
 const { isDark, toggleTheme } = useTheme()
 const { user, isLoggedIn, loginWithDemo, logout } = useAuth()
 const { unread } = await useNotificationSummary()
-
-const NAV_ITEMS = [
-  { label: '首页', to: '/', icon: 'i-lucide:house' },
-  { label: '沸点', to: '/pins', icon: 'i-lucide:message-square' },
-  { label: '小册', to: '/books', icon: 'i-lucide:book-open' },
-  { label: '收藏集', to: '/collection', icon: 'i-lucide:folder' },
-  { label: '排行榜', to: '/rank', icon: 'i-lucide:trophy' },
-] as const
+const appStore = useAppStore()
 </script>
 
 <template>
   <header class="sticky top-0 z-40 border-b border-jj-border bg-jj-bg-card">
-    <div class="mx-auto flex h-15 max-w-[1440px] items-center gap-4 px-4">
+    <div class="mx-auto flex h-15 max-w-[1440px] items-center gap-2 px-4 sm:gap-4">
+      <button
+        type="button"
+        class="cursor-pointer rounded p-1.5 text-jj-text-2 transition-colors hover:bg-jj-bg-hover hover:text-jj-primary lg:hidden"
+        title="菜单"
+        @click="appStore.openMobileNav"
+      >
+        <Icon name="i-lucide:menu" class="size-5" />
+      </button>
+
       <NuxtLink to="/" class="flex shrink-0 items-center gap-2">
         <span
           class="grid size-8 place-items-center rounded bg-jj-primary text-lg font-bold text-white"
@@ -24,7 +28,7 @@ const NAV_ITEMS = [
         <span class="hidden text-lg font-semibold text-jj-text-1 sm:inline">掘金</span>
       </NuxtLink>
 
-      <nav class="flex items-center gap-1">
+      <nav class="hidden items-center gap-1 lg:flex">
         <NuxtLink
           v-for="item in NAV_ITEMS"
           :key="item.to"
@@ -33,14 +37,19 @@ const NAV_ITEMS = [
           active-class="text-jj-primary"
         >
           <Icon :name="item.icon" class="size-4" />
-          <span class="hidden md:inline">{{ item.label }}</span>
+          <span>{{ item.label }}</span>
         </NuxtLink>
       </nav>
 
       <div class="ml-auto flex items-center gap-2">
         <AppSearch />
 
-        <BaseButton variant="secondary" size="sm" @click="navigateTo('/creator')">
+        <BaseButton
+          variant="secondary"
+          size="sm"
+          class="hidden lg:inline-flex"
+          @click="navigateTo('/creator')"
+        >
           创作者中心
         </BaseButton>
 
@@ -73,10 +82,14 @@ const NAV_ITEMS = [
           <span class="hidden max-w-24 truncate text-sm text-jj-text-2 sm:inline">
             {{ user?.nickname }}
           </span>
-          <BaseButton variant="text" size="sm" @click="logout">退出</BaseButton>
+          <BaseButton variant="text" size="sm" class="hidden sm:inline-flex" @click="logout">
+            退出
+          </BaseButton>
         </div>
         <BaseButton v-else size="sm" @click="loginWithDemo">登录</BaseButton>
       </div>
     </div>
+
+    <AppNavDrawer />
   </header>
 </template>

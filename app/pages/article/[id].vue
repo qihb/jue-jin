@@ -32,7 +32,7 @@ const notFound = computed(
   () => status.value === 'error' || (!article.value && status.value !== 'pending'),
 )
 
-useSeoMeta({
+usePageSeo({
   title: () => (article.value ? `${article.value.title} - 掘金` : '文章详情 - 掘金'),
   description: () => article.value?.brief ?? '掘金技术社区 · 文章详情页',
 })
@@ -96,7 +96,7 @@ async function handleDemoLogin() {
 
     <div v-else class="flex gap-4">
       <article class="min-w-0 flex-1">
-        <div class="rounded-jj-card bg-jj-bg-card px-6 py-5 shadow-jj-card">
+        <div class="rounded-jj-card bg-jj-bg-card px-4 py-5 shadow-jj-card sm:px-6">
           <div class="flex items-center gap-3">
             <BaseAvatar :src="article.author.avatar" :size="40" />
             <div class="min-w-0 flex-1">
@@ -106,7 +106,9 @@ async function handleDemoLogin() {
             <BaseButton variant="secondary" size="sm">关注</BaseButton>
           </div>
 
-          <h1 class="mt-5 text-2xl leading-9 font-bold text-jj-text-1">{{ article.title }}</h1>
+          <h1 class="mt-5 text-xl leading-8 font-bold text-jj-text-1 sm:text-2xl sm:leading-9">
+            {{ article.title }}
+          </h1>
 
           <ArticleContent :html="html" class="mt-5" />
 
@@ -128,7 +130,7 @@ async function handleDemoLogin() {
 
         <section
           id="article-comments"
-          class="mt-4 rounded-jj-card bg-jj-bg-card px-6 py-5 shadow-jj-card"
+          class="mt-4 rounded-jj-card bg-jj-bg-card px-4 py-5 shadow-jj-card sm:px-6"
         >
           <CommentEditor
             v-model="commentDraft"

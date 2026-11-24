@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const { pins, status, hasMore, loadingMore, loadMore } = await usePinFeed()
 
-useSeoMeta({
+usePageSeo({
   title: '沸点 - 掘金',
   description: '掘金沸点 · 开发者们的日常分享、吐槽与讨论，短内容社区流。',
 })

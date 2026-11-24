@@ -10,7 +10,7 @@ const notFound = computed(
   () => status.value === 'error' || (!book.value && status.value !== 'pending'),
 )
 
-useSeoMeta({
+usePageSeo({
   title: () => (book.value ? `${book.value.title} - 小册 - 掘金` : '小册详情 - 掘金'),
   description: () => book.value?.description ?? '掘金小册详情',
 })

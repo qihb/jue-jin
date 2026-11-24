@@ -14,5 +14,7 @@
     </div>
 
     <AppFooter />
+
+    <CommonToast />
   </div>
 </template>

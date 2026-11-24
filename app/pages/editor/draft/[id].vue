@@ -24,7 +24,7 @@ const initial = computed<EditorInitialValue | null>(() => {
   }
 })
 
-useSeoMeta({
+usePageSeo({
   title: '编辑草稿 - 掘金',
   description: '掘金创作中心 · 继续编辑本地草稿。',
 })

@@ -16,7 +16,7 @@ watch(isLoggedIn, async (loggedIn) => {
   await refresh()
 })
 
-useSeoMeta({
+usePageSeo({
   title: () => (collection.value ? `${collection.value.name} - 收藏集 - 掘金` : '收藏集 - 掘金'),
   description: () => collection.value?.description ?? '掘金收藏集详情',
 })

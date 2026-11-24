@@ -41,7 +41,7 @@ watch(isLoggedIn, async (loggedIn) => {
   await Promise.all([refresh(), refreshUnread()])
 })
 
-useSeoMeta({
+usePageSeo({
   title: '消息中心 - 掘金',
   description: '掘金消息中心 · 赞和收藏、评论、@我、关注与系统通知。',
 })

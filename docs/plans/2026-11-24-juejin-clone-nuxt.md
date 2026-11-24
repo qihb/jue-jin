@@ -244,10 +244,16 @@ juejin/
 
 ### 阶段 10 · 收尾
 
-- [ ] 10.1 响应式适配（移动端抽屉 / 单栏）：`AppSidebar` 小屏折叠、导航抽屉、文章详情/编辑器单栏回退
-- [ ] 10.2 SEO / meta / sitemap：`app.vue` 默认 meta、`useSeoMeta` 全覆盖复核、`@nuxtjs/sitemap` 或 `server/routes/sitemap.xml.ts` + `robots.txt`
-- [ ] 10.3 404 / 500 与全局错误处理：`error.vue`、`/404`、`/500`、`useRequest` 失败统一提示
-- [ ] 10.4 构建校验（`pnpm build` + `pnpm preview`）与性能自查：包体、SSR 首屏、图片懒加载
+**关键决策（用户确认）**：
+
+- **响应式断点**：统一以 `lg`（1024px）为界。`≥ lg` 保持现有「顶部横向导航 + 双栏（内容 + 侧栏）」；`< lg` 收敛为「汉堡按钮 + 抽屉导航 + 单栏内容」，侧栏与文章目录隐藏。
+- **sitemap 实现**：采用 `@nuxtjs/sitemap`（用户确认引入该依赖，固定 `9.1.0`），站点 URL 走 `runtimeConfig.public.siteUrl`；动态 URL（文章/沸点/小册/标签）由 `server/api/_sitemap-urls.ts`（`defineSitemapEventHandler`）提供，经 `sitemap.sources: ['/api/_sitemap-urls']` 注册。
+- **全局错误提示**：`useRequest` 失败统一调用 `pushToast` 弹提示（SSR 阶段自动跳过），三个 layout 挂 `<CommonToast />`；页面渲染错误由 `app/error.vue` 兜底。
+
+- [x] 10.1 响应式适配（移动端抽屉 / 单栏）：`AppNavDrawer` 抽屉导航、`AppHeader` 移动端收敛、文章详情/编辑器单栏回退
+- [x] 10.2 SEO / meta / sitemap：默认 meta 补全、`useSeoMeta` 复核、`@nuxtjs/sitemap` + `robots.txt`
+- [x] 10.3 404 / 500 与全局错误处理：`app/error.vue`、`useRequest` 失败统一提示（全局 Toast）
+- [x] 10.4 构建校验（`pnpm build` + `pnpm preview`）与性能自查：包体、SSR 首屏、图片懒加载
 
 ---
 
@@ -291,7 +297,7 @@ juejin/
 - **环境事件（需知悉）**：`vite-plus` 于本次自动把 pnpm 由 `10.33.0` 升到 `12.23.0`，触发"store 不一致 → 重建 node_modules"并撞上 pnpm 12 默认的 `minimumReleaseAge`（24h）供应链策略，导致 `node_modules` 一度被清空。已通过 `packageManager: pnpm@10.33.0` 固定版本并用 `pnpm install --frozen-lockfile` 恢复，锁文件未改动。
 - **已知取舍（用户决定）**：暂不安装 `@iconify-json/lucide`，图标在浏览器端向 Iconify 在线 API 拉取（需联网；SSR HTML 中不含图标 SVG）。后续若需离线/首屏图标，再补该 devDependency。
 - 备注：`agent.md` 采用社区通用大写命名 `AGENTS.md`（macOS 文件系统不区分大小写）。
-- 待办：阶段 5（用户体系）已由用户决定**暂缓**；阶段 6 剩余 6.3 依赖登录同样暂缓；阶段 8 已完成；阶段 9 已完成（9.1 ~ 9.5）；剩余阶段 10（收尾）**待用户指定步骤后执行**。
+- 待办：阶段 5（用户体系）已由用户决定**暂缓**；阶段 6 剩余 6.3 依赖登录同样暂缓；阶段 8 已完成；阶段 9 已完成（9.1 ~ 9.5）；**阶段 10（收尾）10.1 ~ 10.4 已全部完成，计划内全部可执行步骤收尾完毕**。
 - **阶段 7 已完成（7.0 ~ 7.5）**，验证结论：
   - 交付（编辑器）：依赖引入 `bytemd` / `@bytemd/vue-next` / `@bytemd/plugin-gfm` / `@bytemd/plugin-highlight` 并在 `AGENTS.md` 备案；`nuxt.config.ts` 引入 `bytemd/dist/index.css`，`main.css` 新增 `@layer components` 主题适配（`.jj-editor .bytemd` 高度/描边/暗色反相）
   - 交付（前端）：`layouts/editor.vue`（精简顶栏 + 全屏无侧栏）、`pages/editor/index.vue`、`pages/editor/drafts.vue`、`pages/editor/draft/[id].vue`、`pages/creator/index.vue`；组件 `editor/Workspace.vue`（ByteMD `<ClientOnly>` + gfm/highlight + 内联中文 locale + 双栏预览）、`editor/TitleBar.vue`（标题/字数/存草稿/发布）、`editor/PublishPanel.vue`（分类/标签/封面/摘要）、`editor/Form.vue`（组合入口 + 发布设置弹窗 + 演示登录弹窗）、`editor/DraftList.vue`（草稿箱与创作中心共用）、`creator/CreatorOverview.vue`（4 张统计卡 + 近 7 日阅读量柱状图）、`creator/CreatorContentList.vue`（内容管理列表）
@@ -329,3 +335,14 @@ juejin/
   - SSR 冒烟（preview:3100）：`/notification`、`/collection`、`/collection/collection_1`、`/collection/nope_404` 均 **HTTP 200**；带 Cookie 时 `/notification` 直出头部昵称、铃铛角标 `9`、消息条目（`收藏了你的文章《用 Rust 重构之后的几点思考》` 等）与 Tab 角标，`/collection` 直出收藏集卡片（`我的技术成长 / 12 篇`）；不带 Cookie 时直出「一键演示登录」门；回归复核 `/`、`/pins`、`/books`、`/rank`、`/article/article_11`、`/book/book_1`、`/creator`、`/search?q=Node` 均 **HTTP 200**
   - 接口冒烟：未登录 `GET /api/notification/list`、`/api/notification/unread`、`/api/collection/list` 均返回空页/零统计；登录后 `GET /api/notification/unread` = `{ total: 9, byTab: { like: 3, comment: 2, follow: 1, system: 3 } }`，`GET /api/notification/list?tab=like`、`GET /api/collection/list`、`GET /api/collection/collection_1` 正常，`GET /api/collection/nope_404` → `data: null`，`POST /api/notification/read`（先 `tab=like` 后全量）逐级归零 ✅
   - 浏览器交互冒烟（Chrome DevTools MCP，纯净 profile）：`/collection` 点「一键演示登录」→ 头部显示昵称、收藏集卡片即时渲染；`/notification` 直出角标 `9` + Tab 角标（评论 2 / 关注 1 / 系统 3）+ 未读红点，点「全部已读」→ 头部与 Tab 角标、未读红点、按钮同时消失；`/collection/collection_999` 走「收藏集不存在」兜底；控制台无 error / warn ✅
+- **阶段 10 · 收尾（10.1 ~ 10.4 全部完成）**，当前进度：
+  - 10.1 响应式适配：新增 `shared/constants/nav.ts`（`NAV_ITEMS`）供头部与抽屉复用；`app/stores/app.ts` 增加 `mobileNavOpen` 与开关方法；新增 `app/components/layout/AppNavDrawer.vue`（Teleport 抽屉 + `useScrollLock` + 路由变化自动收起 + 登录态页脚）；`AppHeader` 重写为「`lg` 以上横向导航 / 以下汉堡」；`pages/article/[id].vue` 收紧移动端内边距与标题字号
+  - 10.2 SEO / meta / sitemap：新增依赖 `@nuxtjs/sitemap@9.1.0`（`--save-exact`，AGENTS.md 已备案）；新增 `server/api/_sitemap-urls.ts`（`defineSitemapEventHandler` 汇总文章 / 沸点 / 小册 / 标签动态 URL）与 `app/composables/usePageSeo.ts`（统一 title/description/og/twitter + canonical），16 个页面改用 `usePageSeo`；`nuxt.config.ts` 补 `site`/`sitemap`/`runtimeConfig.public.siteUrl` 与默认 meta（robots、og:site_name、og:type、twitter:card）；`public/robots.txt` 更新并指向 sitemap
+  - 10.3 全局错误处理：新增 `app/error.vue`（404/500 兜底页，`clearError` 回首页）；新增 `app/composables/useToast.ts` + `app/components/common/Toast.vue`（全局轻提示，SSR 阶段跳过以规避跨请求状态污染）；`useRequest` 在业务失败（`err_no !== 0`）与网络异常时统一 `pushToast`（网络异常只给通用文案 `网络异常，请稍后重试`，不透出 ofetch 技术细节），三个 layout 均挂 `<CommonToast />`
+  - 10.4 构建校验与性能自查：`AppAvatar`（`base/Avatar.vue`）补 `loading="lazy"`，使列表 / 详情页头像全部懒加载（首页 20/20 张图均带 `loading="lazy"`）
+  - 验证（生产构建 + preview:4321，`127.0.0.1` 显式指定以绕开本机旧 dev server 占用的 `[::1]:3000`）：
+    - `pnpm lint` ✅（0 warning / 0 error，152 files）· `pnpm typecheck` ✅（exit 0，仅既有 `Duplicated imports` 与 devtools `addCustomTab` deprecated 告警）· `pnpm build` ✅（Client 2.15 MB / gzip 723.90 kB · Server 707.67 kB · Nitro 7.45 MB）
+    - SSR 冒烟：`/`、`/pins`、`/books`、`/rank`、`/search?q=Node`、`/article/article_1`、`/article/article_11`、`/pin/pin_1`、`/book/book_1`、`/tag/Node`、`/notification`、`/collection`、`/creator`、`/editor`、`/editor/drafts`、`/sitemap.xml`、`/robots.txt` 均 **HTTP 200**；`/nope-404` → **HTTP 404** 且直出 `404 / 页面走丢了 / 返回首页`；`/sitemap.xml` 共 **211** 条 URL
+    - SEO：文章页直出 `canonical=http://121.43.208.113:3000/article/article_1`、`og:title` 为文章标题、`description` 为文章摘要 ✅
+    - 性能自查：首屏 HTML `/` 60.5 KB / `/article/article_1` 50.8 KB / `/pins` 56.3 KB / `/books` 60.2 KB；SSR TTFB ≈ 4.7 ms；客户端最大 chunk 880 KB（含 Vue 运行时）、次大 628 KB（ByteMD 编辑器，按路由懒加载）、另 252 KB / 140 KB；图片懒加载首页 **20/20** ✅
+    - 浏览器交互冒烟（Chrome DevTools MCP，纯净 profile，指向生产 preview）：`390×844` 下头部横向导航隐藏（可见项 0）、汉堡按钮可见，点击后抽屉直出 `掘金 / 首页 / 沸点 / 小册 / 收藏集 / 排行榜 / 创作者中心 / 登录`，`body` 滚动锁生效，点遮罩可关闭；`1280×900` 下横向导航 5 项恢复可见、汉堡隐藏、右栏可见；劫持 `fetch` 制造接口失败后点击分类 Tab，Toast 弹出 `网络异常，请稍后重试`；控制台无 hydration / Vue 运行时报错 ✅

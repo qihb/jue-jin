@@ -21,6 +21,7 @@
 | 工具库 | @vueuse/nuxt                     | 优先复用，避免自造轮子                       |
 | 状态   | Pinia                            | `@pinia/nuxt`                                |
 | 编辑器 | @bytemd/vue-next + bytemd        | 掘金同源 Markdown 编辑器；仅客户端渲染，需引入 `bytemd/dist/index.css` |
+| SEO    | @nuxtjs/sitemap                  | 固定 `9.1.0`（镜像源无 `nuxt-site-config@^5.0.4`，禁止升到 9.2+）；站点地址走 `runtimeConfig.public.siteUrl` |
 | 规范   | @nuxt/eslint + Prettier + Oxlint | 提交前必过                                   |
 | 包管理 | pnpm                             | 锁定版本，禁用 npm/yarn 生成 lockfile        |
 
