@@ -196,9 +196,9 @@ juejin/
 
 ### 阶段 6 · 沸点
 
-- [ ] 6.1 沸点列表 + 分页
-- [ ] 6.2 沸点详情 + 评论
-- [ ] 6.3 发布沸点（文本 + 图片 + 话题）
+- [x] 6.1 沸点列表 + 分页
+- [x] 6.2 沸点详情 + 评论
+- [ ] 6.3 发布沸点（文本 + 图片 + 话题）——暂缓，依赖登录体系
 
 ### 阶段 7 · 编辑器与创作中心
 
@@ -255,10 +255,18 @@ juejin/
   - `pnpm lint` ✅（0 warning / 0 error）· `pnpm typecheck` ✅（exit 0）· `pnpm build` ✅（Client 512.08 kB / Nitro 2.47 MB）
   - SSR 冒烟（preview:3200）：`/`、`/article/article_1`、`/article/article_2` 均 **HTTP 200**；`/article/nope_404` 走「文章不存在」兜底页（HTTP 200）；详情页直出 `.jj-markdown` 正文、5 个 `<h2>` 锚点、`#为什么选择-低代码` 等目录项与标题 id 一一对应、`hljs` 高亮类名、`相关推荐` 与评论区块；`<title>` = `从 0 到 1 搭建 低代码 项目实战 - 掘金`，`description` 取 `brief` ✅
   - 接口冒烟：`GET /api/user/current`、`POST /api/article/like`、`POST /api/article/collect`、`GET /api/article/recommend?id=`、`POST /api/comment/publish` 均 `err_no: 0` 且返回体符合共享类型 ✅
+- **决策（用户确认）**：**跳过阶段 5 用户体系**，走「先展示、后体系」路线——后续模块优先做纯展示与交互功能，登录/真实数据留待部署方案确定后再定；现有「一键演示登录」弹窗保留，点赞/收藏/评论等交互照常可演示。
+- **阶段 6 已完成（6.1 ~ 6.2；6.3 暂缓）**，验证结论：
+  - 交付：`usePinFeed`（`useAsyncData('pin-feed')` 首屏 + `useInfiniteScroll` 游标追加 + 「加载更多」兜底）、`PinCard` / `PinList` + 骨架屏、`pages/pins/index.vue`（`default` 布局，复用首页侧栏）；`server/api/pin/like.post.ts`、`usePinDetail`（`Promise.all` 并行发起详情 + 评论两处 `useAsyncData`，含点赞 / 评论 / 登录拦截）、`PinActions`、`pages/pin/[id].vue`（`article` 布局 + 动态 SEO meta + 演示登录弹窗）；评论组件（`CommentEditor` / `CommentList` / `CommentItem`）按 `targetType: 'pin'` 直接复用
+  - 类型：`shared/types/pin.ts` 新增 `PinLikeResult` 并在 `index.ts` 汇总导出
+  - 路由说明：沸点列表落在 `pages/pins/index.vue`（而非 `pages/pins.vue`），为后续 6.3 `/pins/publish` 预留目录层级，避免 `pins.vue` 与 `pins/` 目录冲突
+  - `pnpm lint` ✅（0 warning / 0 error）· `pnpm typecheck` ✅（exit 0）· `pnpm build` ✅（Client 525.84 kB / Nitro 2.51 MB）
+  - SSR 冒烟（preview:3300）：`/`、`/pins`、`/pin/pin_1`、`/pin/pin_2` 均 **HTTP 200**；`/pin/nope_404` 走「沸点不存在」兜底页（HTTP 200）；`/pins` 直出 **10 张沸点卡**、`__NUXT__` 载荷含 `pin-feed`；`/pin/pin_1` 直出标题 `沸点 - 沉默的前端菜鸟 - 掘金`、正文/话题 `#React`、评论编辑器与 `pin-comments` 区块、载荷 key `pin-detail:pin_1` ✅
+  - 接口冒烟：`GET /api/pin/list?limit=3`、`GET /api/comment/list?targetType=pin&targetId=pin_1`、`POST /api/pin/like`（`{"id":"pin_1"}` → `liked: true` / `likeCount: 147`）均 `err_no: 0` ✅
 - **已知取舍（Nuxt 固有行为）**：`server/mock` 与 `shared/types` 下 `index.ts` 汇总导出 + 领域文件导出会被 Nuxt 自动扫描（`nuxt/dist/index.mjs#L9042` 把 `shared/types` 加入自动导入目录），产生约 20 条 `Duplicated imports` **警告**。因同名类型解析结果完全一致（`index.ts` 仅再导出领域文件），**不影响 lint / typecheck / build 退出码**，且 AGENTS.md §4.1 要求 `index.ts` 汇总导出，故**保留该行为、不作规避**（如需消音只能关闭自动导入扫描，代价过大）。
 - **环境已固化**：Node `24.11.0`（`.nvmrc` + `package.json#engines`）；pnpm `10.33.0`（`package.json#packageManager`）。执行任何命令前需先 `nvm use`——Node 20 会让 ESLint 10 因缺少 `Object.groupBy` 直接崩溃。
 - **依赖偏离说明**：`typescript` 固定 `^5.9`（TS 7 超出 vue-tsc / @typescript-eslint 的 peer 范围）；补充 `cssnano` 消除 Nuxt PostCSS 构建告警。
 - **环境事件（需知悉）**：`vite-plus` 于本次自动把 pnpm 由 `10.33.0` 升到 `12.23.0`，触发"store 不一致 → 重建 node_modules"并撞上 pnpm 12 默认的 `minimumReleaseAge`（24h）供应链策略，导致 `node_modules` 一度被清空。已通过 `packageManager: pnpm@10.33.0` 固定版本并用 `pnpm install --frozen-lockfile` 恢复，锁文件未改动。
 - **已知取舍（用户决定）**：暂不安装 `@iconify-json/lucide`，图标在浏览器端向 Iconify 在线 API 拉取（需联网；SSR HTML 中不含图标 SVG）。后续若需离线/首屏图标，再补该 devDependency。
 - 备注：`agent.md` 采用社区通用大写命名 `AGENTS.md`（macOS 文件系统不区分大小写）。
-- 待办：阶段 5 及之后均**待用户指定步骤后执行**。
+- 待办：阶段 5（用户体系）已由用户决定**暂缓**；阶段 6 剩余 6.3 依赖登录同样暂缓；后续模块均**待用户指定步骤后执行**。

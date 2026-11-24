@@ -6,6 +6,6 @@ export type { Category, Tag } from './tag'
 
 export type { ArticleDetail, ArticleFeedQuery, ArticleSummary } from './article'
 
-export type { PinDetail, PinSummary } from './pin'
+export type { PinDetail, PinLikeResult, PinSummary } from './pin'
 
 export type { Comment, CommentListQuery, CommentTargetType } from './comment'
