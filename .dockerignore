@@ -1,0 +1,33 @@
+# 依赖与构建产物（容器内重新安装/构建）
+node_modules
+.nuxt
+.output
+.nitro
+.data
+.cache
+dist
+
+# 日志
+logs
+*.log
+npm-debug.log*
+
+# 本地环境变量
+.env
+.env.*
+!.env.example
+
+# IDE / 系统
+.DS_Store
+.idea
+.vscode
+.fleet
+*.swp
+
+# 文档（部署不需要）
+docs
+*.md
+!README.md
+
+# 锁文件以外的
+.pnpm-store
