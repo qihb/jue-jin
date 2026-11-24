@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const { isDark, toggleTheme } = useTheme()
+const { user, isLoggedIn, loginWithDemo, logout } = useAuth()
 
 const NAV_ITEMS = [
   { label: '首页', to: '/', icon: 'i-lucide:house' },
@@ -66,7 +67,14 @@ const NAV_ITEMS = [
           <Icon name="i-lucide:bell" class="size-5" />
         </button>
 
-        <BaseButton size="sm">登录</BaseButton>
+        <div v-if="isLoggedIn" class="flex items-center gap-2">
+          <BaseAvatar :src="user?.avatar" :size="28" />
+          <span class="hidden max-w-24 truncate text-sm text-jj-text-2 sm:inline">
+            {{ user?.nickname }}
+          </span>
+          <BaseButton variant="text" size="sm" @click="logout">退出</BaseButton>
+        </div>
+        <BaseButton v-else size="sm" @click="loginWithDemo">登录</BaseButton>
       </div>
     </div>
   </header>

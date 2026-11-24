@@ -180,12 +180,12 @@ juejin/
 - [x] 3.4 右侧栏（签到/作者榜/热门话题/友情链接）
 - [x] 3.5 lint / typecheck / build / SSR 冒烟校验 + 更新计划文档
 
-### 阶段 4 · 文章详情页
+### 阶段 4 · 文章详情页 ✅
 
-- [ ] 4.1 Markdown 渲染 + 代码高亮 + 正文排版
-- [ ] 4.2 目录 TOC 生成与滚动高亮
-- [ ] 4.3 点赞/收藏/评论/分享交互（含登录拦截）
-- [ ] 4.4 作者卡、相关推荐、SEO meta
+- [x] 4.1 Markdown 渲染 + 代码高亮 + 正文排版
+- [x] 4.2 目录 TOC 生成与滚动高亮
+- [x] 4.3 点赞/收藏/评论/分享交互（含登录拦截）
+- [x] 4.4 作者卡、相关推荐、SEO meta
 
 ### 阶段 5 · 用户体系
 
@@ -247,10 +247,18 @@ juejin/
   - `pnpm lint` ✅（0 warning / 0 error）· `pnpm typecheck` ✅（exit 0）· `pnpm build` ✅（Client 326.14 kB / Nitro 1.95 MB）
   - SSR 冒烟（preview:3100）：`/` 与 `/?category=frontend` 均返回 **HTTP 200**；首页直出 10 张文章卡、作者榜 5 条、热门话题标签、`__NUXT__` 载荷含 `article-feed:recommend` / `sidebar-author-rank` / `sidebar-hot-tags`；分类页 key 切换为 `article-feed:frontend` 且过滤生效 ✅
   - **阶段 3 踩坑与修复（NUXT_E1001）**：`useHomeSidebar` 原写法为连续两个 `await useAsyncData(...)`，第二个调用发生在第一个 `await` 之后，脱离了当前 Nuxt 实例上下文 → SSR 抛 `NUXT_E1001（nuxt instance unavailable）`、首页 500。修复：把两处 `useAsyncData` 收敛为同一同步阶段发起的 `await Promise.all([...])`（`useAsyncData` 必须在任何 `await` 之前调用）。经验：**在同一 composable 内多次调用 `useAsyncData` 时，必须并行发起，禁止串行 await**。
+- **阶段 4 已完成（4.1 ~ 4.4）**，验证结论：
+  - 交付（前端）：`app/utils/markdown.ts`（markdown-it `html:false` + highlight.js 按需子路径注册 6 种语言 + 目录收集）、`app/assets/css/markdown.css`（`.jj-markdown` 正文排版，代码高亮 token → 语义色）、`ArticleContent`；`layouts/article.vue` 与 `pages/article/[id].vue`（详情布局 + 动态 SEO meta）；`ArticleMeta` / `ArticleActions` / `ArticleToc`（滚动高亮）/ `ArticleAuthorCard` / `ArticleRecommend`；`CommentEditor` / `CommentList` / `CommentItem`（一层回复）；`AppHeader` 接入占位登录态（已登录显示头像/昵称/退出）
+  - 交付（状态与数据层）：`app/stores/user.ts`（cookie 持久化）、`app/composables/useAuth.ts`、`app/composables/useArticleDetail.ts`（`Promise.all` 并行发起 3 处 `useAsyncData`：详情/评论/相关推荐；含点赞/收藏/评论交互与登录拦截）、`app/middleware/auth.ts`
+  - 交付（mock 接口）：`user/current.get`、`article/like.post`、`article/collect.post`、`article/recommend.get`、`comment/publish.post`；`server/utils/resp.ts#fail` 改为泛型，使失败响应可匹配任意 `ApiResp<T>` 返回类型
+  - 占位登录取舍：阶段 4 的登录为演示实现（`/api/user/current` 固定返回首个 mock 用户），未登录点赞/收藏/评论时由 `loginRequired` 唤起 `BaseModal`，可「一键演示登录」；阶段 5 替换为账号密码登录 + token 鉴权
+  - `pnpm lint` ✅（0 warning / 0 error）· `pnpm typecheck` ✅（exit 0）· `pnpm build` ✅（Client 512.08 kB / Nitro 2.47 MB）
+  - SSR 冒烟（preview:3200）：`/`、`/article/article_1`、`/article/article_2` 均 **HTTP 200**；`/article/nope_404` 走「文章不存在」兜底页（HTTP 200）；详情页直出 `.jj-markdown` 正文、5 个 `<h2>` 锚点、`#为什么选择-低代码` 等目录项与标题 id 一一对应、`hljs` 高亮类名、`相关推荐` 与评论区块；`<title>` = `从 0 到 1 搭建 低代码 项目实战 - 掘金`，`description` 取 `brief` ✅
+  - 接口冒烟：`GET /api/user/current`、`POST /api/article/like`、`POST /api/article/collect`、`GET /api/article/recommend?id=`、`POST /api/comment/publish` 均 `err_no: 0` 且返回体符合共享类型 ✅
 - **已知取舍（Nuxt 固有行为）**：`server/mock` 与 `shared/types` 下 `index.ts` 汇总导出 + 领域文件导出会被 Nuxt 自动扫描（`nuxt/dist/index.mjs#L9042` 把 `shared/types` 加入自动导入目录），产生约 20 条 `Duplicated imports` **警告**。因同名类型解析结果完全一致（`index.ts` 仅再导出领域文件），**不影响 lint / typecheck / build 退出码**，且 AGENTS.md §4.1 要求 `index.ts` 汇总导出，故**保留该行为、不作规避**（如需消音只能关闭自动导入扫描，代价过大）。
 - **环境已固化**：Node `24.11.0`（`.nvmrc` + `package.json#engines`）；pnpm `10.33.0`（`package.json#packageManager`）。执行任何命令前需先 `nvm use`——Node 20 会让 ESLint 10 因缺少 `Object.groupBy` 直接崩溃。
 - **依赖偏离说明**：`typescript` 固定 `^5.9`（TS 7 超出 vue-tsc / @typescript-eslint 的 peer 范围）；补充 `cssnano` 消除 Nuxt PostCSS 构建告警。
 - **环境事件（需知悉）**：`vite-plus` 于本次自动把 pnpm 由 `10.33.0` 升到 `12.23.0`，触发"store 不一致 → 重建 node_modules"并撞上 pnpm 12 默认的 `minimumReleaseAge`（24h）供应链策略，导致 `node_modules` 一度被清空。已通过 `packageManager: pnpm@10.33.0` 固定版本并用 `pnpm install --frozen-lockfile` 恢复，锁文件未改动。
 - **已知取舍（用户决定）**：暂不安装 `@iconify-json/lucide`，图标在浏览器端向 Iconify 在线 API 拉取（需联网；SSR HTML 中不含图标 SVG）。后续若需离线/首屏图标，再补该 devDependency。
 - 备注：`agent.md` 采用社区通用大写命名 `AGENTS.md`（macOS 文件系统不区分大小写）。
-- 待办：阶段 4 及之后均**待用户指定步骤后执行**。
+- 待办：阶段 5 及之后均**待用户指定步骤后执行**。

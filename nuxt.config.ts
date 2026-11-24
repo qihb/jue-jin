@@ -7,7 +7,7 @@ export default defineNuxtConfig({
 
   modules: ['@pinia/nuxt', '@vueuse/nuxt', '@nuxt/icon', '@nuxt/eslint'],
 
-  css: ['~/assets/css/main.css'],
+  css: ['~/assets/css/main.css', '~/assets/css/markdown.css'],
 
   components: [
     // base/ → BaseButton、article/ → ArticleCard …

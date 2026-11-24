@@ -6,9 +6,9 @@ export function ok<T>(data: T): ApiResp<T> {
   return { err_no: 0, err_msg: 'ok', data }
 }
 
-/** 构造失败响应 */
-export function fail(errMsg: string, errNo = 1): ApiResp<null> {
-  return { err_no: errNo, err_msg: errMsg, data: null }
+/** 构造失败响应（`err_no !== 0`，data 恒为 null，调用方只读 err_msg） */
+export function fail<T = null>(errMsg: string, errNo = 1): ApiResp<T> {
+  return { err_no: errNo, err_msg: errMsg, data: null as unknown as T }
 }
 
 /** 归一化游标分页参数：limit 兜底并裁剪到 [1, MAX_PAGE_SIZE]，非法 cursor 回退到首页 */

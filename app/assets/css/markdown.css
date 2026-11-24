@@ -1,0 +1,196 @@
+/* 文章正文排版：只作用于 .jj-markdown 容器，颜色统一走 token（无魔法色值） */
+.jj-markdown {
+  font-size: 16px;
+  line-height: 1.75;
+  color: var(--color-jj-text-1);
+  overflow-wrap: break-word;
+}
+
+.jj-markdown > :first-child {
+  margin-top: 0;
+}
+
+.jj-markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.jj-markdown h1,
+.jj-markdown h2,
+.jj-markdown h3,
+.jj-markdown h4 {
+  margin: 1.5em 0 0.75em;
+  font-weight: 600;
+  line-height: 1.35;
+  /* 锚点跳转时避开吸顶头部 */
+  scroll-margin-top: 5rem;
+}
+
+.jj-markdown h1 {
+  font-size: 1.75em;
+}
+
+.jj-markdown h2 {
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--color-jj-border);
+  font-size: 1.5em;
+}
+
+.jj-markdown h3 {
+  font-size: 1.25em;
+}
+
+.jj-markdown p {
+  margin: 1em 0;
+}
+
+.jj-markdown a {
+  color: var(--color-jj-primary);
+  text-decoration: none;
+}
+
+.jj-markdown a:hover {
+  text-decoration: underline;
+}
+
+.jj-markdown ul,
+.jj-markdown ol {
+  margin: 1em 0;
+  padding-left: 1.5em;
+}
+
+.jj-markdown ul {
+  list-style: disc;
+}
+
+.jj-markdown ol {
+  list-style: decimal;
+}
+
+.jj-markdown li {
+  margin: 0.4em 0;
+}
+
+.jj-markdown blockquote {
+  margin: 1em 0;
+  padding: 0.5em 1em;
+  border-left: 4px solid var(--color-jj-primary);
+  background: var(--color-jj-bg-hover);
+  color: var(--color-jj-text-2);
+}
+
+.jj-markdown code {
+  padding: 0.15em 0.35em;
+  border-radius: 3px;
+  background: var(--color-jj-bg-input);
+  color: var(--color-jj-danger);
+  font-family: ui-monospace, sfmono-regular, menlo, consolas, monospace;
+  font-size: 0.875em;
+}
+
+.jj-markdown pre {
+  margin: 1em 0;
+  padding: 1em;
+  overflow-x: auto;
+  border-radius: 4px;
+  background: var(--color-jj-code-bg);
+  line-height: 1.6;
+}
+
+.jj-markdown pre code {
+  padding: 0;
+  background: none;
+  color: inherit;
+  font-size: 0.875em;
+}
+
+.jj-markdown img {
+  max-width: 100%;
+  border-radius: 4px;
+}
+
+.jj-markdown table {
+  width: 100%;
+  margin: 1em 0;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+.jj-markdown th,
+.jj-markdown td {
+  padding: 0.5em 0.75em;
+  border: 1px solid var(--color-jj-border);
+  text-align: left;
+}
+
+.jj-markdown th {
+  background: var(--color-jj-bg-hover);
+  font-weight: 600;
+}
+
+.jj-markdown hr {
+  margin: 1.5em 0;
+  border: 0;
+  border-top: 1px solid var(--color-jj-border);
+}
+
+/* highlight.js token → 语义色 */
+.jj-markdown .hljs-comment,
+.jj-markdown .hljs-quote {
+  color: var(--color-jj-code-comment);
+  font-style: italic;
+}
+
+.jj-markdown .hljs-keyword,
+.jj-markdown .hljs-selector-tag,
+.jj-markdown .hljs-literal,
+.jj-markdown .hljs-doctag,
+.jj-markdown .hljs-name {
+  color: var(--color-jj-code-keyword);
+}
+
+.jj-markdown .hljs-string,
+.jj-markdown .hljs-attr,
+.jj-markdown .hljs-regexp,
+.jj-markdown .hljs-symbol,
+.jj-markdown .hljs-bullet {
+  color: var(--color-jj-code-string);
+}
+
+.jj-markdown .hljs-number,
+.jj-markdown .hljs-built_in,
+.jj-markdown .hljs-type,
+.jj-markdown .hljs-variable,
+.jj-markdown .hljs-template-variable,
+.jj-markdown .hljs-params {
+  color: var(--color-jj-code-number);
+}
+
+.jj-markdown .hljs-title,
+.jj-markdown .hljs-function,
+.jj-markdown .hljs-title.class_,
+.jj-markdown .hljs-class,
+.jj-markdown .hljs-property,
+.jj-markdown .hljs-attribute {
+  color: var(--color-jj-code-function);
+}
+
+.jj-markdown .hljs-meta,
+.jj-markdown .hljs-section {
+  color: var(--color-jj-code-comment);
+}
+
+.jj-markdown .hljs-deletion {
+  color: var(--color-jj-danger);
+}
+
+.jj-markdown .hljs-addition {
+  color: var(--color-jj-success);
+}
+
+.jj-markdown .hljs-emphasis {
+  font-style: italic;
+}
+
+.jj-markdown .hljs-strong {
+  font-weight: 600;
+}

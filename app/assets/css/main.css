@@ -30,6 +30,14 @@
   --color-jj-danger: #f53f3f;
   --color-jj-gold: #ffb800;
 
+  /* 代码高亮（highlight.js token 映射到语义色，正文样式见 markdown.css） */
+  --color-jj-code-bg: #f7f8fa;
+  --color-jj-code-keyword: #cf222e;
+  --color-jj-code-string: #0a3069;
+  --color-jj-code-number: #0550ae;
+  --color-jj-code-function: #8250df;
+  --color-jj-code-comment: #6e7781;
+
   /* 圆角与阴影 */
   --radius-jj-card: 4px;
   --shadow-jj-card: 0 1px 2px rgb(0 0 0 / 4%);
@@ -55,6 +63,13 @@
   --color-jj-bg-input: #27282b;
   --color-jj-bg-mask: rgb(0 0 0 / 60%);
   --color-jj-border: #2f3033;
+
+  --color-jj-code-bg: #27282b;
+  --color-jj-code-keyword: #ff7b72;
+  --color-jj-code-string: #a5d6ff;
+  --color-jj-code-number: #79c0ff;
+  --color-jj-code-function: #d2a8ff;
+  --color-jj-code-comment: #8b949e;
 
   --shadow-jj-card: 0 1px 2px rgb(0 0 0 / 24%);
 }

@@ -245,7 +245,7 @@ const TAG_NAMES: readonly string[] = TAG_SEEDS.map((tag) => tag.name)
 
 /* ============================== 生成器 ============================== */
 
-function toUserBrief(user: User): UserBrief {
+export function toUserBrief(user: User): UserBrief {
   const { id, username, nickname, avatar, level, description } = user
   return { id, username, nickname, avatar, level, description }
 }
