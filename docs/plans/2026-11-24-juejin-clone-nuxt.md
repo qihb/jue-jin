@@ -202,10 +202,30 @@ juejin/
 
 ### 阶段 7 · 编辑器与创作中心
 
-- [ ] 7.1 Markdown 编辑器（编辑/预览双栏、工具栏）
-- [ ] 7.2 标题 / 封面 / 分类标签 / 发布设置
-- [ ] 7.3 草稿自动保存与草稿箱
-- [ ] 7.4 创作者中心数据概览与内容管理
+**目标**：产出可用的 Markdown 文章编辑器（编辑 / 预览 / 工具栏）、标题与发布设置、本地草稿自动保存与草稿箱、创作者中心概览。
+
+**关键决策（已确认）**：
+
+- **登录拦截**：走「演示登录弹窗」（与文章详情 / 沸点一致），不挂 `middleware/auth`；点「发布」时未登录先唤起 `BaseModal` 一键演示登录。
+- **草稿存储**：纯本地持久化（Pinia + `useLocalStorage`），无服务端草稿接口，无登录归属依赖。
+- **编辑器库**：引入 `@bytemd/vue-next`（掘金官方编辑器同源），配套 `bytemd` 核心 + `@bytemd/plugin-gfm` + `@bytemd/plugin-highlight`，样式走 `bytemd/dist/index.css`；编辑器依赖 DOM，页面内用 `<ClientOnly>` 包裹。需在 `AGENTS.md` 补依赖备案。
+
+**涉及文件**：
+
+- 新增（前端）：`app/layouts/editor.vue`、`app/pages/editor/index.vue`、`app/pages/editor/draft/[id].vue`、`app/pages/editor/drafts.vue`、`app/pages/creator/index.vue`
+- 新增（组件）：`app/components/editor/`（`EditorWorkspace` / `EditorTitleBar` / `EditorPublishPanel`）、`app/components/creator/`（`CreatorOverview` / `CreatorContentList`）
+- 新增（状态 / 组合式）：`app/stores/draft.ts`、`app/composables/useEditor.ts`、`app/composables/useDraft.ts`、`app/composables/useCreator.ts`
+- 新增（mock 接口）：`server/api/article/publish.post.ts`、`server/api/creator/overview.get.ts`
+- 修改：`AGENTS.md`（依赖备案 + §4 补充编辑器约定）、`app/components/layout/AppHeader.vue`（创作者中心入口接 `/creator`）、`shared/types`（新增 `CreatorOverview` 等类型）、`nuxt.config.ts`（如需补 css 引入）
+
+**步骤**：
+
+- [x] 7.0 依赖引入与备案：安装 `bytemd` / `@bytemd/vue-next` / `@bytemd/plugin-gfm` / `@bytemd/plugin-highlight`，引入 `bytemd/dist/index.css`，在 `AGENTS.md` 登记依赖
+- [x] 7.1 编辑器骨架与 Markdown 编辑/预览：`layouts/editor.vue`（精简顶栏 + 全屏无侧栏）、`pages/editor/index.vue`、`EditorWorkspace`（`<ClientOnly>` 包 bytemd Editor + 插件 + 双栏预览）、`useEditor`（内容/标题/元信息状态聚合）
+- [x] 7.2 标题 / 封面 / 分类标签 / 发布设置：`EditorTitleBar`（标题输入 + 字数统计）、`EditorPublishPanel`（分类选择走 `CONTENT_CATEGORIES`、标签、封面、摘要，弹窗形式）、mock `article/publish.post.ts`（演示登录校验 + 写入内存 db，缺封面/摘要时兜底）
+- [x] 7.3 草稿自动保存与草稿箱：`stores/draft.ts`（localStorage 持久化 + 增删改查）、`useDraft`（debounce 自动保存、列表/删除）、`pages/editor/draft/[id].vue`（载入指定草稿）、`pages/editor/drafts.vue`（草稿箱：继续编辑 / 删除）
+- [x] 7.4 创作者中心：`pages/creator/index.vue`（Tab：数据概览 / 内容管理 / 草稿列表）、`useCreator` + mock `creator/overview.get.ts`、`AppHeader` 创作者中心按钮接 `/creator`
+- [x] 7.5 lint / typecheck / build / SSR 冒烟校验 + 更新计划文档
 
 ### 阶段 8 · 搜索 / 标签 / 排行榜 / 小册
 
@@ -270,3 +290,14 @@ juejin/
 - **已知取舍（用户决定）**：暂不安装 `@iconify-json/lucide`，图标在浏览器端向 Iconify 在线 API 拉取（需联网；SSR HTML 中不含图标 SVG）。后续若需离线/首屏图标，再补该 devDependency。
 - 备注：`agent.md` 采用社区通用大写命名 `AGENTS.md`（macOS 文件系统不区分大小写）。
 - 待办：阶段 5（用户体系）已由用户决定**暂缓**；阶段 6 剩余 6.3 依赖登录同样暂缓；后续模块均**待用户指定步骤后执行**。
+- **阶段 7 已完成（7.0 ~ 7.5）**，验证结论：
+  - 交付（编辑器）：依赖引入 `bytemd` / `@bytemd/vue-next` / `@bytemd/plugin-gfm` / `@bytemd/plugin-highlight` 并在 `AGENTS.md` 备案；`nuxt.config.ts` 引入 `bytemd/dist/index.css`，`main.css` 新增 `@layer components` 主题适配（`.jj-editor .bytemd` 高度/描边/暗色反相）
+  - 交付（前端）：`layouts/editor.vue`（精简顶栏 + 全屏无侧栏）、`pages/editor/index.vue`、`pages/editor/drafts.vue`、`pages/editor/draft/[id].vue`、`pages/creator/index.vue`；组件 `editor/Workspace.vue`（ByteMD `<ClientOnly>` + gfm/highlight + 内联中文 locale + 双栏预览）、`editor/TitleBar.vue`（标题/字数/存草稿/发布）、`editor/PublishPanel.vue`（分类/标签/封面/摘要）、`editor/Form.vue`（组合入口 + 发布设置弹窗 + 演示登录弹窗）、`editor/DraftList.vue`（草稿箱与创作中心共用）、`creator/CreatorOverview.vue`（4 张统计卡 + 近 7 日阅读量柱状图）、`creator/CreatorContentList.vue`（内容管理列表）
+  - 交付（状态 / 组合式）：`stores/draft.ts`（`useLocalStorage('jj-drafts')` 持久化 + 增删改查）、`useDraft`、`useEditor`（表单聚合 + debounce 2s 自动保存 + `saveNow` + 发布 + `loginRequired` 演示登录拦截）、`useCreator`（`Promise.all` 并行 `creator-overview` + `creator-contents`，游标追加）
+  - 交付（mock 接口）：`server/api/article/publish.post.ts`（校验标题/正文，分类兜底，`deriveBrief` 从 Markdown 提取摘要，写入内存 db）、`server/api/creator/overview.get.ts`（由当前用户文章确定性推导统计与近 7 日趋势）、`server/api/creator/contents.get.ts`（当前用户文章游标分页）
+  - 组件命名修正：因 `components` 配置 `pathPrefix: true`，将 `editor/EditorForm.vue` 重命名为 `editor/Form.vue`（→ `EditorForm`），删除早期误命名的 `Editor*.vue` 重复文件；`EditorTitleBar` / `EditorWorkspace` / `EditorPublishPanel` 分别由 `TitleBar.vue` / `Workspace.vue` / `PublishPanel.vue` 提供
+  - 连带改动：`app/utils/format.ts` 新增 `formatDateTime`（本地草稿等以真实时间为准的 `MM-DD HH:mm`）；`AppHeader` 创作者中心按钮接入 `/creator`
+  - 踩坑与修复：`@bytemd/vue-next` 的 `d.ts` 把组件导出声明成了类型（`DefineComponent`），`verbatimModuleSyntax` 下无法作为值导入（TS1484）；改为 `import * as bytemdVue` 后按运行时导出取回 `Editor` 组件引用
+  - `pnpm lint` ✅（0 warning / 0 error）· `pnpm typecheck` ✅（exit 0）· `pnpm build` ✅（Client 2.11 MB / gzip 705.82 kB · Nitro 6.69 MB；ByteMD 仅随编辑器路由懒加载）
+  - SSR 冒烟（preview:3400）：`/editor`、`/editor/drafts`、`/creator` 均 **HTTP 200**；`/editor` 直出标题栏（`输入文章标题…`、`存草稿`、`发布`、`草稿箱`），ByteMD 走 `<ClientOnly>` 兜底（SSR 无 `bytemd-toolbar`/`bytemd-body`，避免水合不一致）；`/creator` 直出 `数据概览/内容管理/草稿列表` Tab、统计卡与 `近 7 日阅读量`、内容列表文章标题，`__NUXT__` 载荷含 `creator-overview` / `creator-contents` ✅
+  - 接口冒烟：`GET /api/creator/overview`（`totalView: 50082` + `viewSeries` 7 点 + `trends`）、`GET /api/creator/contents?limit=2`（游标 `cursor: "2"` / `hasMore: true`）、`POST /api/article/publish`（`{"title":"测试发布","content":"# 标题\n\n正文内容"}` → `id: article_new_1`，摘要自动生成）、`POST` 空标题 → `err_no: 400 文章标题不能为空` ✅

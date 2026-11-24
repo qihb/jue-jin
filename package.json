@@ -19,10 +19,14 @@
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {
+    "@bytemd/plugin-gfm": "^1.22.0",
+    "@bytemd/plugin-highlight": "^1.22.0",
+    "@bytemd/vue-next": "^1.22.0",
     "@nuxt/icon": "^2.6.3",
     "@pinia/nuxt": "^1.0.3",
     "@vueuse/core": "^15.1.0",
     "@vueuse/nuxt": "^15.1.0",
+    "bytemd": "^1.22.0",
     "highlight.js": "^11.12.0",
     "markdown-it": "^15.0.3",
     "nuxt": "^4.6.4",

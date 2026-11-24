@@ -48,7 +48,9 @@ const NAV_ITEMS = [
           >
         </div>
 
-        <BaseButton variant="secondary" size="sm">创作者中心</BaseButton>
+        <BaseButton variant="secondary" size="sm" @click="navigateTo('/creator')">
+          创作者中心
+        </BaseButton>
 
         <button
           type="button"

@@ -43,3 +43,16 @@ export interface ArticleFeedQuery extends CursorQuery {
   /** 分类 id；`recommend` 为推荐流，缺省等同 recommend */
   category?: string
 }
+
+/** 编辑器表单值：标题 / 正文 / 封面 / 分类 / 标签 / 摘要（发布与草稿共用） */
+export interface ArticleFormValue {
+  title: string
+  /** Markdown 正文 */
+  content: string
+  /** 手动摘要，留空时由服务端截取正文生成 */
+  brief: string
+  /** 封面图地址，空字符串表示无封面 */
+  cover: string
+  categoryId: string
+  tags: string[]
+}

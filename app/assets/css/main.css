@@ -87,3 +87,38 @@
     background-color: var(--color-jj-bg-page);
   }
 }
+
+/* ============ ByteMD 编辑器：贴合主题 token（组件内不再写样式） ============ */
+@layer components {
+  .jj-editor .bytemd {
+    height: calc(100vh - 264px);
+    min-height: 480px;
+    border: 1px solid var(--color-jj-border);
+    border-radius: var(--radius-jj-card);
+    color: var(--color-jj-text-1);
+    background-color: var(--color-jj-bg-card);
+  }
+
+  .jj-editor .bytemd-toolbar,
+  .jj-editor .bytemd-status {
+    color: var(--color-jj-text-2);
+    background-color: var(--color-jj-bg-card);
+  }
+
+  .jj-editor .bytemd-toolbar,
+  .jj-editor .bytemd-status,
+  .jj-editor .bytemd-body,
+  .jj-editor .bytemd-preview {
+    border-color: var(--color-jj-border);
+  }
+
+  .jj-editor .CodeMirror {
+    color: var(--color-jj-text-1);
+    background-color: var(--color-jj-bg-card);
+  }
+
+  /* 暗色下工具栏图标为深色线稿，反相以便可见 */
+  .dark .jj-editor .bytemd-toolbar-icon {
+    filter: invert(1) brightness(1.6);
+  }
+}

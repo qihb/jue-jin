@@ -7,7 +7,12 @@ export default defineNuxtConfig({
 
   modules: ['@pinia/nuxt', '@vueuse/nuxt', '@nuxt/icon', '@nuxt/eslint'],
 
-  css: ['~/assets/css/main.css', '~/assets/css/markdown.css'],
+  css: [
+    '~/assets/css/main.css',
+    '~/assets/css/markdown.css',
+    // ByteMD 编辑器样式（仅编辑器页使用，类名统一 bytemd- 前缀，不污染全站）
+    'bytemd/dist/index.css',
+  ],
 
   components: [
     // base/ → BaseButton、article/ → ArticleCard …
