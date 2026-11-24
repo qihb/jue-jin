@@ -5,14 +5,14 @@ import { DEFAULT_PAGE_SIZE } from '~~/shared/constants'
 /**
  * 首页文章流：首屏用 `useAsyncData` 取第一页（SSR 直出），
  * 客户端按游标追加下一页（无限滚动 / 手动「加载更多」）。
- * 切换分类时 `key` 变化自动重取第一页，并清空已追加的数据。
+ * 切换分类或排序方式时 `key` 变化自动重取第一页，并清空已追加的数据。
  */
-export async function useArticleFeed(category: Ref<string>) {
+export async function useArticleFeed(category: Ref<string>, sort: Ref<string>) {
   const { data, status, refresh } = await useAsyncData(
-    () => `article-feed:${category.value}`,
+    () => `article-feed:${category.value}:${sort.value}`,
     () =>
       request<CursorPage<ArticleSummary>>('/api/article/feed', {
-        query: { category: category.value, limit: DEFAULT_PAGE_SIZE },
+        query: { category: category.value, sort: sort.value, limit: DEFAULT_PAGE_SIZE },
       }),
   )
 
@@ -39,7 +39,12 @@ export async function useArticleFeed(category: Ref<string>) {
     loadingMore.value = true
     try {
       const page = await request<CursorPage<ArticleSummary>>('/api/article/feed', {
-        query: { category: category.value, limit: DEFAULT_PAGE_SIZE, cursor: cursor.value },
+        query: {
+          category: category.value,
+          sort: sort.value,
+          limit: DEFAULT_PAGE_SIZE,
+          cursor: cursor.value,
+        },
       })
       extra.value = [...extra.value, ...page.list]
       cursor.value = page.cursor

@@ -29,7 +29,6 @@ const PIN_COUNT = 60
 const COMMENT_COUNT = 200
 
 type Rng = () => number
-type ImageSize = 'square' | 'landscape_4_3' | 'portrait_4_3'
 
 /** mulberry32：轻量确定性伪随机数发生器 */
 function createRng(seed: number): Rng {
@@ -62,11 +61,27 @@ function isoTime(offsetMinutes: number): string {
   return new Date(MOCK_BASE_TIME + offsetMinutes * 60_000).toISOString()
 }
 
-/** 生成图片地址（统一走平台文生图接口，禁止外部占位图） */
-function imageUrl(prompt: string, size: ImageSize): string {
-  return `https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=${encodeURIComponent(
-    prompt,
-  )}&image_size=${size}`
+/**
+ * 本地预置封面图集（10 张不同主题的技术插画）。
+ * 所有 mock 数据的图片统一从该池中随机选取，避免依赖在线文生图接口
+ * （该接口异步生成，未就绪时会显示「图片生成中」的占位，体验不佳）。
+ */
+const COVER_IMAGES = [
+  '/covers/cover-01.jpg',
+  '/covers/cover-02.jpg',
+  '/covers/cover-03.jpg',
+  '/covers/cover-04.jpg',
+  '/covers/cover-05.jpg',
+  '/covers/cover-06.jpg',
+  '/covers/cover-07.jpg',
+  '/covers/cover-08.jpg',
+  '/covers/cover-09.jpg',
+  '/covers/cover-10.jpg',
+] as const
+
+/** 从本地封面图池中确定性取一张 */
+function coverImage(rng: Rng): string {
+  return pick(rng, COVER_IMAGES)
 }
 
 /* ============================== 词库 ============================== */
@@ -414,7 +429,7 @@ function generateUsers(rng: Rng, count: number): User[] {
       id: `user_${seq}`,
       username: `juejin_${seq}`,
       nickname: `${pick(rng, NICKNAME_PREFIX)}${pick(rng, NICKNAME_CORE)}${pick(rng, NICKNAME_SUFFIX)}`,
-      avatar: imageUrl(`扁平矢量技术风格开发者头像，配色方案 ${seq}`, 'square'),
+      avatar: coverImage(rng),
       level: int(rng, 1, 8),
       description: pick(rng, USER_DESCRIPTIONS),
       email: `juejin_${seq}@example.com`,
@@ -479,9 +494,7 @@ function generateArticles(rng: Rng, count: number, users: User[]): ArticleDetail
       id: `article_${seq}`,
       title,
       brief: pick(rng, ARTICLE_BRIEFS),
-      cover: hasCover
-        ? imageUrl(`${topic} 技术文章封面插画，蓝色科技感，编号 ${seq}`, 'landscape_4_3')
-        : '',
+      cover: hasCover ? coverImage(rng) : '',
       categoryId,
       tags,
       author: toUserBrief(pick(rng, users)),
@@ -509,7 +522,7 @@ function generatePins(rng: Rng, count: number, users: User[]): PinDetail[] {
     pins.push({
       id: `pin_${seq}`,
       content: pick(rng, PIN_CONTENTS),
-      images: hasImage ? [imageUrl(`开发者日常配图，简洁风格，编号 ${seq}`, 'landscape_4_3')] : [],
+      images: hasImage ? [coverImage(rng)] : [],
       topics: [pick(rng, TAG_NAMES)],
       author: toUserBrief(pick(rng, users)),
       likeCount: int(rng, 0, 500),
@@ -598,7 +611,7 @@ function generateBooks(rng: Rng, users: User[]): BookDetail[] {
     return {
       id,
       title: seed.title,
-      cover: imageUrl(`${seed.title} 技术小册封面，扁平插画风，编号 ${index + 1}`, 'portrait_4_3'),
+      cover: coverImage(rng),
       description: seed.description,
       author: toUserBrief(pick(rng, users)),
       tags: seed.tags,
@@ -762,7 +775,7 @@ function generateCollections(
         userId: user.id,
         name,
         description: pick(rng, COLLECTION_DESCRIPTIONS),
-        cover: imageUrl(`${name} 收藏集封面，扁平插画风，编号 ${seq}`, 'landscape_4_3'),
+        cover: coverImage(rng),
         createdAt: isoTime(createdOffset),
         updatedAt: isoTime(createdOffset + int(rng, 60, 1000)),
         articleIds,

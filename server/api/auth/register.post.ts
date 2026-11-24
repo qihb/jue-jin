@@ -1,7 +1,6 @@
-import type { ApiResp, UserBrief } from '~~/shared/types'
+import type { ApiResp, User } from '~~/shared/types'
 import { PASSWORD_MIN_LENGTH, USERNAME_PATTERN } from '~~/shared/constants'
 import { createUserWithPassword, getUserByUsername } from '../../db'
-import { toUserBrief } from '../../mock/seed'
 import { issueAuthCookie } from '../../utils/auth'
 import { hashPassword } from '../../utils/password'
 import { fail, ok } from '../../utils/resp'
@@ -9,8 +8,8 @@ import { fail, ok } from '../../utils/resp'
 /** 昵称最大长度 */
 const NICKNAME_MAX_LENGTH = 20
 
-/** 注册：校验用户名 / 昵称 / 密码 → 建号并签发 JWT Cookie */
-export default defineEventHandler(async (event): Promise<ApiResp<UserBrief>> => {
+/** 注册：校验用户名 / 昵称 / 密码 → 建号并签发 JWT Cookie，返回完整 User */
+export default defineEventHandler(async (event): Promise<ApiResp<User>> => {
   const body = await readBody<{ username?: string; nickname?: string; password?: string } | undefined>(
     event,
   )
@@ -41,7 +40,6 @@ export default defineEventHandler(async (event): Promise<ApiResp<UserBrief>> => 
     passwordHash: hashPassword(password),
   })
 
-  const brief = toUserBrief(user)
-  await issueAuthCookie(event, brief)
-  return ok(brief)
+  await issueAuthCookie(event, user)
+  return ok(user)
 })

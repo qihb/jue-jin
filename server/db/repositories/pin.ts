@@ -65,15 +65,36 @@ const PIN_SELECT = `
 `
 
 export function listPins(
-  params: { limit: number; cursor: string },
+  params: { sort: 'recommend' | 'newest' | 'follow'; limit: number; cursor: string },
   userId: ID | null,
 ): CursorPage<PinDetail> {
-  const { limit, cursor } = params
+  const { sort, limit, cursor } = params
   const offset = Number.parseInt(cursor, 10) || 0
 
-  const rows = db
-    .prepare(`${PIN_SELECT} ORDER BY p.created_at DESC LIMIT ? OFFSET ?`)
-    .all(limit + 1, offset) as unknown as PinWithAuthorRow[]
+  const order =
+    sort === 'newest'
+      ? 'ORDER BY p.created_at DESC'
+      : sort === 'follow'
+        ? 'ORDER BY p.created_at DESC'
+        : 'ORDER BY p.like_count DESC, p.created_at DESC'
+
+  let rows: PinWithAuthorRow[]
+
+  // 关注流：仅返回关注作者的沸点
+  if (sort === 'follow') {
+    if (!userId) {
+      return { list: [], cursor: '', hasMore: false }
+    }
+    rows = db
+      .prepare(
+        `${PIN_SELECT} JOIN follows f ON f.followee_id = p.author_id AND f.follower_id = ? ${order} LIMIT ? OFFSET ?`,
+      )
+      .all(userId, limit + 1, offset) as unknown as PinWithAuthorRow[]
+  } else {
+    rows = db
+      .prepare(`${PIN_SELECT} ${order} LIMIT ? OFFSET ?`)
+      .all(limit + 1, offset) as unknown as PinWithAuthorRow[]
+  }
 
   const hasMore = rows.length > limit
   const list = rows.slice(0, limit).map((row) => rowToPinDetail(row, isPinLiked(row.id, userId)))

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { FEED_CATEGORIES } from '~~/shared/constants'
+import { SORT_TABS } from '~~/shared/constants'
 
 const model = defineModel<string>({ required: true })
 
-const items = FEED_CATEGORIES.map((category) => ({ label: category.name, value: category.id }))
+const items = SORT_TABS.map((tab) => ({ label: tab.name, value: tab.id }))
 </script>
 
 <template>

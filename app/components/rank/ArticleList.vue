@@ -9,6 +9,7 @@ defineProps<{ articles: ArticleSummary[] }>()
     <li v-for="(article, index) in articles" :key="article.id">
       <NuxtLink
         :to="`/article/${article.id}`"
+        target="_blank"
         class="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-jj-bg-hover"
       >
         <span

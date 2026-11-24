@@ -6,6 +6,21 @@ export const RECOMMEND_CATEGORY_ID = 'recommend'
 /** 「关注」聚合流 id */
 export const FOLLOW_CATEGORY_ID = 'follow'
 
+/** 排序方式 id */
+export const SORT_RECOMMEND = 'recommend'
+export const SORT_NEWEST = 'newest'
+export const SORT_FOLLOW = 'follow'
+
+/** 排序方式 tab */
+export const SORT_TABS = [
+  { id: SORT_RECOMMEND, name: '推荐' },
+  { id: SORT_NEWEST, name: '最新' },
+  { id: SORT_FOLLOW, name: '关注' },
+] as const
+
+/** 默认排序 */
+export const DEFAULT_SORT = SORT_RECOMMEND
+
 /** 首页内容流分类：`recommend` / `follow` 为聚合流，其余按分类聚合 */
 export const FEED_CATEGORIES: readonly Category[] = [
   { id: RECOMMEND_CATEGORY_ID, name: '推荐' },
@@ -18,6 +33,14 @@ export const FEED_CATEGORIES: readonly Category[] = [
   { id: 'tools', name: '开发工具' },
   { id: 'code-life', name: '代码人生' },
   { id: 'reading', name: '阅读' },
+]
+
+/** 左侧导航分类（综合 + 各领域分类） */
+export const NAV_CATEGORIES: readonly Category[] = [
+  { id: '', name: '综合' },
+  ...FEED_CATEGORIES.filter(
+    (category) => category.id !== RECOMMEND_CATEGORY_ID && category.id !== FOLLOW_CATEGORY_ID,
+  ),
 ]
 
 /** 真实内容分类（排除「推荐」「关注」两个聚合流） */

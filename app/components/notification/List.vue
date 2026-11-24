@@ -41,6 +41,7 @@ function linkOf(item: NotificationItem) {
       <li v-for="item in props.items" :key="item.id">
         <NuxtLink
           :to="linkOf(item)"
+          :target="item.targetType === 'article' ? '_blank' : undefined"
           class="flex gap-3 px-4 py-3 transition-colors hover:bg-jj-bg-hover"
         >
           <BaseAvatar v-if="item.actor" :src="item.actor.avatar" :size="36" />

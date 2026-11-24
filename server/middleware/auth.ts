@@ -1,4 +1,4 @@
-import { getUserBriefById } from '../db'
+import { getUserById } from '../db'
 import { AUTH_COOKIE_NAME, verifyToken } from '../utils/auth'
 
 /**
@@ -16,5 +16,5 @@ export default defineEventHandler(async (event) => {
     event.context.user = null
     return
   }
-  event.context.user = getUserBriefById(userId)
+  event.context.user = getUserById(userId)
 })

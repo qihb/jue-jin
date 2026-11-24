@@ -99,16 +99,25 @@ function handleSearch() {
             </div>
 
             <nav class="flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-2">
-              <NuxtLink
-                v-for="item in NAV_ITEMS"
-                :key="item.to"
-                :to="item.to"
-                class="flex items-center gap-3 rounded px-3 py-2.5 text-sm text-jj-text-2 transition-colors hover:bg-jj-bg-hover hover:text-jj-primary"
-                active-class="bg-jj-bg-hover text-jj-primary"
-              >
-                <Icon :name="item.icon" class="size-4.5" />
-                {{ item.label }}
-              </NuxtLink>
+              <template v-for="item in NAV_ITEMS" :key="item.to">
+                <NuxtLink
+                  v-if="!item.external"
+                  :to="item.to"
+                  class="rounded px-3 py-2.5 text-sm text-jj-text-2 transition-colors hover:bg-jj-bg-hover hover:text-jj-primary"
+                  active-class="bg-jj-bg-hover text-jj-primary"
+                >
+                  {{ item.label }}
+                </NuxtLink>
+                <a
+                  v-else
+                  :href="item.to"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="rounded px-3 py-2.5 text-sm text-jj-text-2 transition-colors hover:bg-jj-bg-hover hover:text-jj-primary"
+                >
+                  {{ item.label }}
+                </a>
+              </template>
               <NuxtLink
                 to="/pins/publish"
                 class="mt-1 flex items-center gap-3 rounded border-t border-jj-border px-3 py-2.5 pt-3 text-sm text-jj-text-2 transition-colors hover:bg-jj-bg-hover hover:text-jj-primary"

@@ -22,9 +22,9 @@ function collectAll<T>(fetchPage: (cursor: string) => CursorPage<T>): T[] {
  */
 export default defineSitemapEventHandler(() => {
   const articles = collectAll((cursor) =>
-    listArticles({ category: 'recommend', limit: PAGE_SIZE, cursor }, null),
+    listArticles({ category: '', sort: 'recommend', limit: PAGE_SIZE, cursor }, null),
   )
-  const pins = collectAll((cursor) => listPins({ limit: PAGE_SIZE, cursor }, null))
+  const pins = collectAll((cursor) => listPins({ sort: 'recommend', limit: PAGE_SIZE, cursor }, null))
   const books = collectAll((cursor) => listBooks({ limit: PAGE_SIZE, cursor }))
   const tags = collectAll((cursor) => listTags({ limit: PAGE_SIZE, cursor }))
 

@@ -91,35 +91,52 @@ export const ARTICLE_SELECT = `
   JOIN users u ON u.id = a.author_id
 `
 
-/** 文章流：按分类过滤 + 游标分页（cursor = 偏移量）；`follow` 流按关注关系过滤，未登录为空 */
+/**
+ * 文章流：按分类过滤 + 排序方式 + 游标分页（cursor = 偏移量）。
+ * - category：分类筛选，空串表示「综合」（全部）
+ * - sort：排序方式
+ *   - recommend：按热度（view_count + like_count）倒序
+ *   - newest：按发布时间倒序
+ *   - follow：仅关注作者的文章（未登录返回空）
+ */
 export function listArticles(
-  params: { category: string; limit: number; cursor: string },
+  params: { category: string; sort: 'recommend' | 'newest' | 'follow'; limit: number; cursor: string },
   userId: ID | null,
 ): CursorPage<ArticleSummary> {
-  const { category, limit, cursor } = params
+  const { category, sort, limit, cursor } = params
   const offset = Number.parseInt(cursor, 10) || 0
-  const order = 'ORDER BY a.created_at DESC'
+
+  const order =
+    sort === 'newest'
+      ? 'ORDER BY a.created_at DESC'
+      : sort === 'follow'
+        ? 'ORDER BY a.created_at DESC'
+        : 'ORDER BY (a.view_count + a.like_count) DESC, a.created_at DESC'
 
   let rows: ArticleWithAuthorRow[]
 
-  if (category === 'follow') {
-    // 未登录没有关注关系，直接返回空列表
+  // 关注流：仅返回关注作者的文章
+  if (sort === 'follow') {
     if (!userId) {
       return { list: [], cursor: '', hasMore: false }
     }
+    const where = category ? `WHERE a.category_id = ?` : ''
+    const categoryClause = category ? [category] : []
     rows = db
       .prepare(
-        `${ARTICLE_SELECT} JOIN follows f ON f.followee_id = a.author_id AND f.follower_id = ? ${order} LIMIT ? OFFSET ?`,
+        `${ARTICLE_SELECT} JOIN follows f ON f.followee_id = a.author_id AND f.follower_id = ? ${where} ${order} LIMIT ? OFFSET ?`,
       )
-      .all(userId, limit + 1, offset) as unknown as ArticleWithAuthorRow[]
-  } else if (category === 'recommend') {
-    rows = db
-      .prepare(`${ARTICLE_SELECT} ${order} LIMIT ? OFFSET ?`)
-      .all(limit + 1, offset) as unknown as ArticleWithAuthorRow[]
-  } else {
+      .all(userId, ...categoryClause, limit + 1, offset) as unknown as ArticleWithAuthorRow[]
+  } else if (category) {
+    // 指定分类
     rows = db
       .prepare(`${ARTICLE_SELECT} WHERE a.category_id = ? ${order} LIMIT ? OFFSET ?`)
       .all(category, limit + 1, offset) as unknown as ArticleWithAuthorRow[]
+  } else {
+    // 综合（全部分类）
+    rows = db
+      .prepare(`${ARTICLE_SELECT} ${order} LIMIT ? OFFSET ?`)
+      .all(limit + 1, offset) as unknown as ArticleWithAuthorRow[]
   }
 
   const hasMore = rows.length > limit

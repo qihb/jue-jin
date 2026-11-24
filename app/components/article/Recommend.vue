@@ -9,7 +9,11 @@ const props = defineProps<{ articles: ArticleSummary[] }>()
     <h2 class="text-sm font-medium text-jj-text-1">相关推荐</h2>
     <ul class="mt-1 divide-y divide-jj-border">
       <li v-for="item in props.articles" :key="item.id">
-        <NuxtLink :to="`/article/${item.id}`" class="group flex gap-3 py-3">
+        <NuxtLink
+          :to="`/article/${item.id}`"
+          target="_blank"
+          class="group flex gap-3 py-3"
+        >
           <div class="min-w-0 flex-1">
             <h3 class="line-clamp-2 text-sm text-jj-text-1 group-hover:text-jj-primary">
               {{ item.title }}

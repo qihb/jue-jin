@@ -1,4 +1,4 @@
-import type { UserBrief } from '~~/shared/types'
+import type { User } from '~~/shared/types'
 
 /** 修改密码（需登录）：不依赖登录态 store，提升到模块作用域避免重复创建 */
 async function changePassword(oldPassword: string, newPassword: string) {
@@ -17,26 +17,26 @@ export function useAuth() {
 
   /** 一键演示登录（无 body 时服务端走演示账号） */
   async function loginWithDemo() {
-    const brief = await request<UserBrief>('/api/auth/login', { method: 'POST' })
-    store.login(brief)
+    const next = await request<User>('/api/auth/login', { method: 'POST' })
+    store.login(next)
   }
 
   /** 账号密码登录 */
   async function loginWithPassword(username: string, password: string) {
-    const brief = await request<UserBrief>('/api/auth/login', {
+    const next = await request<User>('/api/auth/login', {
       method: 'POST',
       body: { username, password },
     })
-    store.login(brief)
+    store.login(next)
   }
 
   /** 注册并自动登录 */
   async function register(params: { username: string; nickname: string; password: string }) {
-    const brief = await request<UserBrief>('/api/auth/register', {
+    const next = await request<User>('/api/auth/register', {
       method: 'POST',
       body: params,
     })
-    store.login(brief)
+    store.login(next)
   }
 
   async function logout() {

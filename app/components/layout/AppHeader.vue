@@ -1,10 +1,24 @@
 <script setup lang="ts">
 import { NAV_ITEMS } from '~~/shared/constants'
 
-const { isDark, toggleTheme } = useTheme()
-const { user, isLoggedIn, logout } = useAuth()
+const { user, isLoggedIn } = useAuth()
 const { unread } = await useNotificationSummary()
 const appStore = useAppStore()
+
+/** 创作者中心下拉 */
+const creatorOpen = ref(false)
+/** 个人中心下拉 */
+const userOpen = ref(false)
+
+function openCreator() {
+  creatorOpen.value = !creatorOpen.value
+  userOpen.value = false
+}
+
+function openUser() {
+  userOpen.value = !userOpen.value
+  creatorOpen.value = false
+}
 </script>
 
 <template>
@@ -29,81 +43,73 @@ const appStore = useAppStore()
       </NuxtLink>
 
       <nav class="hidden items-center gap-1 lg:flex">
-        <NuxtLink
-          v-for="item in NAV_ITEMS"
-          :key="item.to"
-          :to="item.to"
-          class="flex items-center gap-1 rounded px-3 py-1.5 text-sm text-jj-text-2 transition-colors hover:bg-jj-bg-hover hover:text-jj-primary"
-          active-class="text-jj-primary"
-        >
-          <Icon :name="item.icon" class="size-4" />
-          <span>{{ item.label }}</span>
-        </NuxtLink>
+        <template v-for="item in NAV_ITEMS" :key="item.to">
+          <NuxtLink
+            v-if="!item.external"
+            :to="item.to"
+            class="rounded px-3 py-1.5 text-sm text-jj-text-2 transition-colors hover:bg-jj-bg-hover hover:text-jj-primary"
+            active-class="text-jj-primary"
+          >
+            {{ item.label }}
+          </NuxtLink>
+          <a
+            v-else
+            :href="item.to"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="rounded px-3 py-1.5 text-sm text-jj-text-2 transition-colors hover:bg-jj-bg-hover hover:text-jj-primary"
+          >
+            {{ item.label }}
+          </a>
+        </template>
       </nav>
 
-      <div class="ml-auto flex items-center gap-2">
+      <div class="ml-auto flex items-center gap-3">
         <AppSearch />
 
-        <BaseButton
-          variant="secondary"
-          size="sm"
-          class="hidden lg:inline-flex"
-          @click="navigateTo('/creator')"
-        >
-          创作者中心
-        </BaseButton>
+        <!-- 创作者中心（蓝色按钮 + 下拉） -->
+        <CreatorCenterMenu v-model="creatorOpen">
+          <button
+            type="button"
+            class="flex items-center gap-1 rounded bg-jj-primary px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-jj-primary-hover"
+            @click="openCreator"
+          >
+            创作者中心
+            <Icon
+              name="i-lucide:chevron-down"
+              class="size-3.5 transition-transform"
+              :class="creatorOpen && 'rotate-180'"
+            />
+          </button>
+        </CreatorCenterMenu>
 
-        <BaseButton size="sm" class="hidden sm:inline-flex" @click="navigateTo('/pins/publish')">
-          <Icon name="i-lucide:pen-line" class="size-3.5" />
-          发沸点
-        </BaseButton>
-
-        <button
-          type="button"
-          class="cursor-pointer rounded p-2 text-jj-text-2 transition-colors hover:bg-jj-bg-hover hover:text-jj-primary"
-          :title="isDark ? '切换到浅色' : '切换到暗色'"
-          @click="toggleTheme"
-        >
-          <Icon :name="isDark ? 'i-lucide:sun' : 'i-lucide:moon'" class="size-5" />
-        </button>
-
+        <!-- 消息铃铛 -->
         <NuxtLink
           to="/notification"
-          class="relative rounded p-2 text-jj-text-2 transition-colors hover:bg-jj-bg-hover hover:text-jj-primary"
+          class="relative rounded p-1 text-jj-text-2 transition-colors hover:bg-jj-bg-hover hover:text-jj-primary"
           title="消息"
           active-class="text-jj-primary"
         >
           <Icon name="i-lucide:bell" class="size-5" />
           <span
             v-if="unread.total > 0"
-            class="absolute top-0.5 right-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-jj-danger px-1 text-[10px] leading-none font-medium text-white"
+            class="absolute top-0 right-0 grid h-4 min-w-4 place-items-center rounded-full bg-jj-danger px-1 text-[10px] leading-none font-medium text-white"
           >
             {{ unread.total > 99 ? '99+' : unread.total }}
           </span>
         </NuxtLink>
 
-        <div v-if="isLoggedIn" class="flex items-center gap-2">
-          <NuxtLink
-            :to="`/user/${user?.id}`"
-            class="flex items-center gap-2 rounded px-1 py-0.5 transition-colors hover:bg-jj-bg-hover"
+        <!-- 头像（个人中心下拉） -->
+        <UserMenu v-if="isLoggedIn && user" v-model="userOpen" :user="user">
+          <button
+            type="button"
+            class="rounded-full ring-2 ring-transparent transition-all hover:ring-jj-primary/40"
+            @click="openUser"
           >
-            <BaseAvatar :src="user?.avatar" :size="28" />
-            <span class="hidden max-w-24 truncate text-sm text-jj-text-2 sm:inline">
-              {{ user?.nickname }}
-            </span>
-          </NuxtLink>
-          <NuxtLink
-            to="/settings/profile"
-            class="rounded p-2 text-jj-text-2 transition-colors hover:bg-jj-bg-hover hover:text-jj-primary"
-            title="设置"
-            active-class="text-jj-primary"
-          >
-            <Icon name="i-lucide:settings" class="size-5" />
-          </NuxtLink>
-          <BaseButton variant="text" size="sm" class="hidden sm:inline-flex" @click="logout">
-            退出
-          </BaseButton>
-        </div>
+            <BaseAvatar :src="user.avatar" :size="32" />
+          </button>
+        </UserMenu>
+
         <BaseButton v-else size="sm" @click="navigateTo('/login')">登录</BaseButton>
       </div>
     </div>

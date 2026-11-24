@@ -1,4 +1,4 @@
-import type { UserBrief } from '~~/shared/types'
+import type { User } from '~~/shared/types'
 
 /**
  * 应用初始化：根据 JWT Cookie 恢复登录态。
@@ -11,9 +11,9 @@ export default defineNuxtPlugin(async () => {
   const userStore = useUserStore()
   if (userStore.user) return
 
-  const { data } = await useAsyncData<UserBrief | null>('auth:current-user', async () => {
+  const { data } = await useAsyncData<User | null>('auth:current-user', async () => {
     try {
-      return await request<UserBrief>('/api/user/current')
+      return await request<User>('/api/user/current')
     } catch {
       return null
     }

@@ -1,6 +1,5 @@
-import type { ApiResp, UserBrief } from '~~/shared/types'
+import type { ApiResp, User } from '~~/shared/types'
 import { createUser, getPasswordHash, getUserByUsername } from '../../db'
-import { toUserBrief } from '../../mock/seed'
 import { issueAuthCookie } from '../../utils/auth'
 import { verifyPassword } from '../../utils/password'
 import { fail, ok } from '../../utils/resp'
@@ -8,8 +7,9 @@ import { fail, ok } from '../../utils/resp'
 /**
  * 登录：带 `username` / `password` 时走真实密码校验；
  * 无 body 时保持原有「一键演示登录」（登录为固定演示账号 `juejin_1`）。
+ * 返回完整 User（含统计字段），供前端展示。
  */
-export default defineEventHandler(async (event): Promise<ApiResp<UserBrief>> => {
+export default defineEventHandler(async (event): Promise<ApiResp<User>> => {
   const body = await readBody<{ username?: string; password?: string } | undefined>(event).catch(
     () => undefined,
   )
@@ -23,9 +23,8 @@ export default defineEventHandler(async (event): Promise<ApiResp<UserBrief>> => 
     if (!user || !stored || !verifyPassword(password, stored)) {
       return fail('用户名或密码错误', 401)
     }
-    const brief = toUserBrief(user)
-    await issueAuthCookie(event, brief)
-    return ok(brief)
+    await issueAuthCookie(event, user)
+    return ok(user)
   }
 
   // 一键演示登录
@@ -41,7 +40,6 @@ export default defineEventHandler(async (event): Promise<ApiResp<UserBrief>> => 
     })
   }
 
-  const brief = toUserBrief(user)
-  await issueAuthCookie(event, brief)
-  return ok(brief)
+  await issueAuthCookie(event, user)
+  return ok(user)
 })
