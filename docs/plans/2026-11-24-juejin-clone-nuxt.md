@@ -189,8 +189,8 @@ juejin/
 
 ### 阶段 5 · 用户体系
 
-- [ ] 5.1 登录 / 注册页 + mock 鉴权 + token 持久化
-- [ ] 5.2 `middleware/auth` 路由守卫
+- [x] 5.1 登录鉴权 + token 持久化（演示账号一键登录 → 真实 JWT HttpOnly Cookie，见部署计划）；独立登录/注册页待开发
+- [x] 5.2 `middleware/auth` 路由守卫（Nitro 中间件解析 JWT，交互接口未登录返回 401）
 - [ ] 5.3 用户主页（文章/沸点/收藏/赞过/关注 Tab）
 - [ ] 5.4 个人设置页
 
@@ -301,3 +301,9 @@ juejin/
   - `pnpm lint` ✅（0 warning / 0 error）· `pnpm typecheck` ✅（exit 0）· `pnpm build` ✅（Client 2.11 MB / gzip 705.82 kB · Nitro 6.69 MB；ByteMD 仅随编辑器路由懒加载）
   - SSR 冒烟（preview:3400）：`/editor`、`/editor/drafts`、`/creator` 均 **HTTP 200**；`/editor` 直出标题栏（`输入文章标题…`、`存草稿`、`发布`、`草稿箱`），ByteMD 走 `<ClientOnly>` 兜底（SSR 无 `bytemd-toolbar`/`bytemd-body`，避免水合不一致）；`/creator` 直出 `数据概览/内容管理/草稿列表` Tab、统计卡与 `近 7 日阅读量`、内容列表文章标题，`__NUXT__` 载荷含 `creator-overview` / `creator-contents` ✅
   - 接口冒烟：`GET /api/creator/overview`（`totalView: 50082` + `viewSeries` 7 点 + `trends`）、`GET /api/creator/contents?limit=2`（游标 `cursor: "2"` / `hasMore: true`）、`POST /api/article/publish`（`{"title":"测试发布","content":"# 标题\n\n正文内容"}` → `id: article_new_1`，摘要自动生成）、`POST` 空标题 → `err_no: 400 文章标题不能为空` ✅
+- **部署 + SQLite 持久化 + 登录真实化已完成**（详见 [部署计划](./2026-11-24-deploy-and-auth.md)），验证结论：
+  - **SQLite 持久化层**：新增 `server/db/index.ts`（Node 24 内置 `node:sqlite`，零原生依赖），建表 `users` / `articles` / `pins` / `comments` / `article_likes` / `article_collects` / `pin_likes` / `tags`；`server/mock/seed.ts` 重构为纯数据生成函数，空库自动灌入；17 个接口从内存 `db` 改查 SQLite，重启服务数据不丢
+  - **登录真实化**：`server/middleware/auth.ts` 解析 JWT Cookie → `event.context.user`；`/api/auth/login` 演示账号一键登录签发 JWT（HttpOnly, SameSite=Lax, 7d）；`/api/auth/logout` 清除 Cookie；交互接口（点赞/收藏/评论/发布）未登录返回 401
+  - **前端对接**：`app/stores/user.ts` 移除客户端 cookie 改内存态；`app/composables/useAuth.ts` 对接 `/api/auth/login` 和 `/api/auth/logout`；`app/plugins/auth.ts` SSR 时拉取 `/api/user/current` 恢复登录态
+  - **ECS 部署**：Docker 多阶段构建（`node:24-alpine`），`docker-compose.yml` 暴露 `3000:3000`，volume `./data:/app/data` 持久化 SQLite，日志轮转 10MB×3，JWT_SECRET 随机生成
+  - **公网验证通过**：http://121.43.208.113:3000 —— 文章列表 API 正常、登录签发 JWT Cookie、点赞切换正确、首页 SSR 渲染 `<title>掘金 - 一个帮助开发者成长的社区</title>`

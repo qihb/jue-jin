@@ -27,11 +27,10 @@
 # 1. 登录服务器
 ssh root@121.43.208.113
 
-# 2. 安装 Docker Compose 插件（Docker 已装，补 compose 插件）
-#    Alibaba Cloud Linux 3 用 dnf
-dnf install -y docker-compose-plugin
+# 2. 安装 git（Alibaba Cloud Linux 3 默认未安装）
+dnf install -y git
 
-# 3. 验证
+# 3. 验证 Docker Compose（ECS 已预装 Docker 26.1.3 + Compose v2.27.0）
 docker compose version
 ```
 
@@ -40,15 +39,13 @@ docker compose version
 ## 三、首次部署
 
 ```bash
-# 1. 拉取代码（假设用 git；或用 scp 上传）
-mkdir -p /opt/juejin && cd /opt/juejin
-git clone <仓库地址> .
-# 或：scp -r 本地项目 root@121.43.208.113:/opt/juejin
+# 1. 拉取代码
+cd /root
+git clone https://github.com/qihb/jue-jin.git
+cd /root/jue-jin
 
 # 2. 修改 JWT 密钥（生产环境务必修改！）
-vi docker-compose.yml
-# 把 JWT_SECRET 改成一段长随机字符串，例如：
-# openssl rand -hex 32
+sed -i "s|change-this-to-a-long-random-string|$(openssl rand -hex 32)|" docker-compose.yml
 
 # 3. 构建并启动
 docker compose up -d --build
@@ -57,8 +54,8 @@ docker compose up -d --build
 docker compose logs -f
 
 # 5. 验证
-curl http://localhost:3000/api/health
-# 期望：{"err_no":0,"err_msg":"ok","data":{...}}
+curl http://localhost:3000/api/article/feed?limit=1
+# 期望：{"err_no":0,"err_msg":"ok","data":{"list":[...]}}
 ```
 
 浏览器访问 `http://121.43.208.113:3000` 即可看到站点。
@@ -68,7 +65,7 @@ curl http://localhost:3000/api/health
 ## 四、更新部署
 
 ```bash
-cd /opt/juejin
+cd /root/jue-jin
 
 # 拉取最新代码
 git pull
@@ -88,10 +85,10 @@ SQLite 数据库文件挂载在宿主机 `./data/juejin.db`，容器重建不丢
 
 ```bash
 # 备份数据库
-cp /opt/juejin/data/juejin.db /opt/juejin/data/juejin.db.bak.$(date +%Y%m%d)
+cp /root/jue-jin/data/juejin.db /root/jue-jin/data/juejin.db.bak.$(date +%Y%m%d)
 
 # 恢复
-cp /opt/juejin/data/juejin.db.bak.20261124 /opt/juejin/data/juejin.db
+cp /root/jue-jin/data/juejin.db.bak.20261124 /root/jue-jin/data/juejin.db
 docker compose restart
 ```
 

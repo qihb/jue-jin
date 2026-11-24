@@ -35,7 +35,7 @@
 - [x] 1.2 编写 `docker-compose.yml`：服务 `juejin`，端口 `3000:3000`，volume `./data:/app/data`，`restart: always`
 - [x] 1.3 编写 `.dockerignore`（排除 node_modules / .output / .git / data）
 - [x] 1.4 `docs/deploy.md`：服务器初始化（安全组放行 3000）、拉取代码、`docker compose up -d`、日志查看、更新流程
-- [ ] 1.5 本地 `docker build` 验证镜像可构建（本机无 Docker 运行时，需在 ECS 上验证）
+- [x] 1.5 本地 `docker build` 验证镜像可构建（本机无 Docker 运行时，已在 ECS 上验证构建成功）
 
 ### 步骤 2 · SQLite 持久化层
 
@@ -59,13 +59,15 @@
 ### 步骤 4 · 联调与部署更新
 
 - [x] 4.1 `pnpm lint` / `pnpm typecheck` / `pnpm build` 全通过
-- [ ] 4.2 重新构建镜像并部署到 ECS，公网访问验证
-- [ ] 4.3 更新主计划文档 `docs/plans/2026-11-24-juejin-clone-nuxt.md` 当前状态
+- [x] 4.2 重新构建镜像并部署到 ECS，公网访问验证（部署成功，公网 http://121.43.208.113:3000 访问正常，登录/点赞/SSR 全部验证通过）
+- [x] 4.3 更新主计划文档 `docs/plans/2026-11-24-juejin-clone-nuxt.md` 当前状态
 
 ---
 
 ## 当前状态
 
-- 步骤 1–3 全部完成，步骤 4.1（lint/typecheck/build）已通过
-- 冒烟测试通过：登录签发 JWT Cookie、点赞/收藏切换正确、未登录返回 401、登出清除 Cookie
-- 待执行：4.2 部署到 ECS 并公网验证，4.3 更新主计划文档
+- **全部步骤完成（1.1 ~ 4.3）**，项目已成功部署上线
+- 公网访问地址：http://121.43.208.113:3000
+- 公网验证通过：文章列表 API、登录签发 JWT Cookie、点赞切换、首页 SSR 渲染均正常
+- 服务器：阿里云 ECS（2核4G，Alibaba Cloud Linux 3），Docker Compose 部署，SQLite 数据持久化
+- 登录体系：演示账号一键登录 → 真实 JWT HttpOnly Cookie，交互接口（点赞/收藏/评论/发布）需登录
