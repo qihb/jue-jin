@@ -4,6 +4,11 @@
 
 **在线访问**：http://121.43.208.113:3000
 
+**一键演示登录**：站点内置演示账号 `juejin_1`，无需注册即可体验登录后功能。
+- 访问 [/login](http://121.43.208.113:3000/login)，点击下方 **「一键演示登录」** 按钮即可登录
+- 其他页面（文章详情 / 沸点 / 关注流等）触发点赞、评论、关注等操作时，也会弹出一键演示登录入口
+- 登录后可体验：点赞 / 收藏 / 评论 / 关注 / 发布沸点 / 创作者中心 / 消息中心等交互
+
 ---
 
 ## 技术栈
@@ -13,13 +18,15 @@
 | 框架 | Nuxt 4（Vue 3.5 + Nitro 2） | 4.x |
 | 语言 | TypeScript（strict） | 5.9 |
 | 样式 | Tailwind CSS v4（`@tailwindcss/vite`） | v4 |
-| 图标 | @nuxt/icon + Iconify | 按需引入 |
+| 图标 | @nuxt/icon + Iconify（本地图标集 `@iconify-json/lucide`） | SSR 直出内联 SVG，不依赖在线 API |
 | 工具库 | @vueuse/nuxt | 优先复用 |
 | 状态 | Pinia（`@pinia/nuxt`） | — |
 | 编辑器 | @bytemd/vue-next + bytemd | 掘金同源 Markdown 编辑器 |
 | 数据库 | SQLite（Node 24 内置 `node:sqlite`） | 零原生依赖 |
-| 鉴权 | JWT（`jose`，HttpOnly Cookie） | HS256，7 天过期 |
+| 鉴权 | JWT（`jose`，HttpOnly Cookie） | HS256，7 天过期；生产必须注入 `JWT_SECRET` |
 | 部署 | Docker Compose | 多阶段构建 |
+| 测试 | Vitest | 纯函数单测（`tests/`） |
+| CI | GitHub Actions | lint → typecheck → test → build |
 | 规范 | @nuxt/eslint + Prettier + Oxlint | 提交前必过 |
 | 包管理 | pnpm | 10.33.0 |
 
@@ -82,6 +89,7 @@ pnpm lint          # ESLint + Oxlint 校验
 pnpm lint:fix      # 自动修复
 pnpm format        # Prettier 格式化
 pnpm typecheck     # vue-tsc 类型检查
+pnpm test          # Vitest 纯函数单测
 ```
 
 ---
@@ -94,8 +102,9 @@ pnpm typecheck     # vue-tsc 类型检查
 # 1. 克隆代码
 git clone <repo-url> && cd juejin
 
-# 2. 生成随机 JWT_SECRET 并替换 docker-compose.yml 中的默认值
-sed -i "s|change-this-to-a-long-random-string|$(openssl rand -hex 32)|" docker-compose.yml
+# 2. 注入 JWT 密钥（必填）：compose 从同目录 .env 读取（.env 已在 .gitignore 中）
+echo "JWT_SECRET=$(openssl rand -hex 32)" > .env
+# 也可改用 shell 环境变量：export JWT_SECRET=$(openssl rand -hex 32)
 
 # 3. 构建并启动
 docker compose up -d --build
@@ -103,6 +112,10 @@ docker compose up -d --build
 # 4. 查看日志
 docker logs -f juejin
 ```
+
+> **JWT_SECRET 必填**：`docker-compose.yml` 使用 `${JWT_SECRET:?...}` 强制注入，未提供时 compose 直接报错；
+> 应用在 `NODE_ENV=production` 且缺少该变量时也会**启动即退出**，避免静默使用弱密钥。
+> 因此本地执行 `pnpm preview` 前同样需要先设置 `JWT_SECRET`。
 
 ### 更新部署
 
@@ -137,13 +150,16 @@ juejin/
 │  ├─ stores/        # Pinia 状态（user/ app/ draft）
 │  └─ utils/         # 工具函数（format/ markdown）
 ├─ server/           # Nitro 服务端
-│  ├─ api/           # 接口（article/ pin/ comment/ user/ auth/ creator/ tag/ author）
-│  ├─ db/            # SQLite 数据层（建表 + 仓储函数）
+│  ├─ api/           # 接口（article/ pin/ comment/ user/ auth/ creator/ tag/ book/ collection/ notification/ rank/ author/ search/ health）
+│  ├─ db/            # SQLite 数据层（schema 建表/迁移 + repositories/ 分领域仓储）
 │  ├─ middleware/    # Nitro 中间件（auth JWT 解析）
 │  ├─ mock/          # 种子数据生成
-│  └─ utils/         # 工具（resp 统一响应/ auth JWT 签发）
+│  ├─ plugins/       # Nitro 启动插件（jwt-guard：生产缺失密钥直接退出）
+│  └─ utils/         # 工具（resp 统一响应 / auth JWT 签发 / password scrypt）
 ├─ shared/           # client 与 server 共享的类型、常量、纯函数
+├─ tests/            # Vitest 纯函数单测
 ├─ docs/             # 计划与设计文档
+├─ .github/workflows # CI（lint / typecheck / test / build）
 └─ public/           # 静态资源
 ```
 
@@ -193,6 +209,19 @@ interface ApiResp<T> {
 | POST | `/api/user/profile` | 更新个人资料 | ✅ |
 | GET | `/api/creator/overview` | 创作者概览 | - |
 | GET | `/api/creator/contents` | 创作者内容列表 | ✅ |
+| GET | `/api/search` | 站内搜索（文章/用户/标签/小册） | - |
+| GET | `/api/tag/list` | 标签列表 | - |
+| GET | `/api/tag/:tag` | 标签详情 + 标签下文章 | - |
+| GET | `/api/author/rank` | 作者榜 | - |
+| GET | `/api/rank/article` | 文章阅读榜 | - |
+| GET | `/api/book/list` | 小册列表 | - |
+| GET | `/api/book/:id` | 小册详情 | - |
+| GET | `/api/collection/list` | 收藏集列表 | ✅ |
+| GET | `/api/collection/:id` | 收藏集详情（公开可读） | - |
+| GET | `/api/notification/list` | 消息列表（Tab + 分页，未登录返回空页） | - |
+| GET | `/api/notification/unread` | 未读统计 | - |
+| POST | `/api/notification/read` | 标记已读 | ✅ |
+| GET | `/api/health` | 健康检查 | - |
 
 ---
 
@@ -204,7 +233,7 @@ interface ApiResp<T> {
 - 组件只负责展示与交互，禁止直连接口（数据通过 props / composables 注入）
 - 所有请求只允许出现在 `composables/` 或页面的 `useAsyncData` 中
 - 颜色/间距全部走 token，禁止魔法色值
-- 请求只出现在 composable 或页面 `useAsyncData`
+- 纯函数逻辑（格式化 / 分页 / 密码 / 常量守卫）补 Vitest 单测，改动后 `pnpm test` 需全绿
 
 ---
 

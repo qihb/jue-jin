@@ -91,3 +91,4 @@
   - SSR 冒烟：`/settings/profile`、`/settings/account`、`/pins/publish` 未登录均 **302 → `/login?redirect=...`**，带 Cookie 均 **HTTP 200** 且直出「个人资料 / 掘金号 / 发布沸点」；`/pins`、`/user/user_2` **HTTP 200**
   - `nuxt.config.ts#sitemap.exclude` 与 `public/robots.txt` 同步纳入 `/settings`、`/settings/**`、`/pins/publish`（私有页不进 sitemap）
 - 取舍说明：标签页「关注」按钮仍为展示态（无标签关注表，不在本次范围）；沸点配图为图片 URL 输入（多张 + 预览 + 删除），不做文件上传 / 对象存储；account 页手机绑定以「暂不支持」占位。
+- **后续变更（2026-11-24 整体审查加固，详见 [整体审查后的补充与优化](./2026-11-24-review-hardening.md)）**：本文涉及的 `server/db/index.ts`（表 / 幂等迁移 / 仓储）已拆分为 `server/db/schema.ts` + `server/db/repositories/*`（`index.ts` 仅做汇总 re-export，导入路径不变）；新增 `vitest` 纯函数单测与 GitHub Actions CI；生产环境缺 `JWT_SECRET` 时服务启动即退出。

@@ -5,7 +5,7 @@
 **涉及文件**：
 
 - 修改：`server/utils/auth.ts`、`docker-compose.yml`、`server/db/index.ts`、`package.json`、`nuxt.config.ts`
-- 新增：`server/db/schema.ts`、`server/db/repositories/*.ts`、`vitest.config.ts`、`tests/**`、`.github/workflows/ci.yml`
+- 新增：`server/plugins/jwt-guard.ts`、`server/db/schema.ts`、`server/db/repositories/*.ts`、`vitest.config.ts`、`tests/**`、`.github/workflows/ci.yml`
 - 依赖新增：`vitest`（dev）、`@iconify-json/lucide`（dev）
 
 **关键决策（已确认）**：

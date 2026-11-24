@@ -101,6 +101,9 @@ usePageSeo({
       >
         一键演示登录
       </BaseButton>
+      <p class="mt-2 text-center text-xs text-jj-text-3">
+        无需账号，点击即登录为演示用户（用户名 <code class="text-jj-text-2">juejin_1</code>）
+      </p>
 
       <p class="mt-6 text-center text-sm text-jj-text-3">
         还没有账号？

@@ -44,8 +44,8 @@ cd /root
 git clone https://github.com/qihb/jue-jin.git
 cd /root/jue-jin
 
-# 2. 修改 JWT 密钥（生产环境务必修改！）
-sed -i "s|change-this-to-a-long-random-string|$(openssl rand -hex 32)|" docker-compose.yml
+# 2. 注入 JWT 密钥（必填）：写入同目录 .env，docker compose 会自动读取
+echo "JWT_SECRET=$(openssl rand -hex 32)" > .env
 
 # 3. 构建并启动
 docker compose up -d --build
@@ -54,9 +54,18 @@ docker compose up -d --build
 docker compose logs -f
 
 # 5. 验证
-curl http://localhost:3000/api/article/feed?limit=1
+curl http://localhost:3000/api/health
+# 期望：{"err_no":0,"err_msg":"ok","data":{"status":"ok","time":"..."}}
+curl "http://localhost:3000/api/article/feed?limit=1"
 # 期望：{"err_no":0,"err_msg":"ok","data":{"list":[...]}}
 ```
+
+> **注意 · JWT_SECRET 必填**
+>
+> - `docker-compose.yml` 已改为 `${JWT_SECRET:?...}` 强制注入，未提供时 `docker compose` 会直接报错、不会启动。
+> - 应用自身在 `NODE_ENV=production` 且缺少 `JWT_SECRET` 时会**启动即退出**并打印提示（`server/plugins/jwt-guard.ts`），避免静默使用弱密钥。
+> - 旧文档中的 `sed -i "s|change-this-to-a-long-random-string|..."` 写法已废弃（compose 中不再存在该默认值）。
+> - `.env` 已在 `.gitignore` 中，不会入库；更新代码后密钥保持不变，无需重新生成（重新生成会使已登录用户的 Cookie 失效）。
 
 浏览器访问 `http://121.43.208.113:3000` 即可看到站点。
 
@@ -75,7 +84,12 @@ docker compose up -d --build
 
 # 查看日志确认启动成功
 docker compose logs --tail=50
+
+# 健康检查
+curl -s http://localhost:3000/api/health
 ```
+
+> `git pull` 不会改动同目录 `.env`，`JWT_SECRET` 保持不变；若首次部署遗漏了 `.env`，容器会在启动阶段直接报错退出（日志可见「缺少环境变量 JWT_SECRET」）。
 
 ---
 
@@ -116,7 +130,8 @@ docker image prune -f
 
 ## 七、后续优化（可选）
 
-1. **域名 + HTTPS**：域名 A 记录指向 `121.43.208.113`，用 Caddy 自动签 Let's Encrypt 证书，反代 `localhost:3000`
+1. **域名 + HTTPS**：域名 A 记录指向 `121.43.208.113`，用 Caddy 自动签 Let's Encrypt 证书，反代 `localhost:3000`；站点切到 HTTPS 后，登录 Cookie 会自动带上 `Secure`
 2. **进程守护**：`restart: unless-stopped` 已覆盖崩溃重启；服务器重启后 Docker 服务自启需 `systemctl enable docker`
 3. **日志**：compose 已配置 10MB × 3 文件轮转
-4. **安全**：生产环境修改 `JWT_SECRET`，定期更新系统补丁
+4. **安全**：`JWT_SECRET` 已改为**强制注入**（缺失即启动失败），首次部署生成随机值并妥善保管，切勿提交到仓库；定期更新系统补丁
+5. **CI**：`.github/workflows/ci.yml` 在 `push` / `pull_request` 时依次执行 `lint → typecheck → test → build`，提交前建议本地先跑一遍 `pnpm test`

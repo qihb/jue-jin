@@ -17,11 +17,13 @@
 | 框架   | Nuxt                             | 4.x（Vue 3.5+ / Nitro 2）                    |
 | 语言   | TypeScript                       | strict 模式，禁止裸 `any`                    |
 | 样式   | Tailwind CSS                     | v4（`@tailwindcss/vite`），token 走 CSS 变量 |
-| 图标   | @nuxt/icon + Iconify             | 按需引入                                     |
+| 图标   | @nuxt/icon + Iconify             | `mode: 'svg'` + `serverBundle: 'local'`，图标数据来自本地 `@iconify-json/lucide`（SSR 直出 SVG，禁止依赖在线 Iconify API） |
 | 工具库 | @vueuse/nuxt                     | 优先复用，避免自造轮子                       |
 | 状态   | Pinia                            | `@pinia/nuxt`                                |
 | 编辑器 | @bytemd/vue-next + bytemd        | 掘金同源 Markdown 编辑器；仅客户端渲染，需引入 `bytemd/dist/index.css` |
 | SEO    | @nuxtjs/sitemap                  | 固定 `9.1.0`（镜像源无 `nuxt-site-config@^5.0.4`，禁止升到 9.2+）；站点地址走 `runtimeConfig.public.siteUrl` |
+| 测试   | Vitest                           | 纯函数单测，用例放 `tests/`，脚本 `pnpm test` |
+| CI     | GitHub Actions                   | `.github/workflows/ci.yml`：`lint → typecheck → test → build` |
 | 规范   | @nuxt/eslint + Prettier + Oxlint | 提交前必过                                   |
 | 包管理 | pnpm                             | 锁定版本，禁用 npm/yarn 生成 lockfile        |
 
@@ -35,10 +37,12 @@
 
 ```text
 app/        前端全部代码（Nuxt 4 app 目录分层）
-server/     Nitro 服务端：mock 接口与数据源
+server/     Nitro 服务端：接口、SQLite 数据层（schema + repositories）与种子数据
 shared/     client 与 server 共享的类型、常量、纯函数
+tests/      Vitest 纯函数单测（仅覆盖 shared / app/utils / server/utils 的纯逻辑）
 docs/       计划与设计文档
 public/     静态资源（图标、图片、favicon）
+.github/    CI 工作流（lint / typecheck / test / build）
 ```
 
 **依赖方向（单向，不可逆向）**：
@@ -52,6 +56,7 @@ server ┘
 - `app/` 与 `server/` **禁止**互相 import。
 - 共享内容**只能**放 `shared/`。
 - `shared/` 内**禁止**出现任何 Nuxt/Vue 运行时 API（保持纯净、可被两端引用）。
+- `tests/` 只做纯函数单测，**禁止**引入 Nuxt/Vue 运行时或依赖真实数据库。
 
 ---
 
@@ -112,6 +117,8 @@ server ┘
 - 分页统一使用 `limit` + `cursor` 游标分页，返回 `{ list, cursor, hasMore }`。
 - 列表类接口必须支持分页，禁止一次性返回全量数据。
 - mock 数据由 `server/mock/seed.ts` 生成，使用**固定随机种子**，保证 SSR 与 CSR 渲染结果一致（避免 hydration mismatch）。
+- 数据持久化统一走 `server/db`（`node:sqlite`）：`schema.ts` 负责建表与幂等迁移，`repositories/` 按领域拆分仓储，`index.ts` 仅做汇总 re-export；调用方一律 `import ... from '~~/server/db'`。
+- 生产环境（`NODE_ENV=production`）**必须**通过环境变量注入 `JWT_SECRET`，缺失时服务启动即退出（`server/plugins/jwt-guard.ts`）；禁止在代码中硬编码密钥。
 - 接口文件命名遵循 Nuxt：`xxx.get.ts` / `xxx.post.ts`，路径即 `server/api/` 下的目录结构。
 
 ---
@@ -148,9 +155,11 @@ server ┘
 ```bash
 pnpm dev          # 本地开发 http://localhost:3000
 pnpm build        # 生产构建
-pnpm preview      # 预览构建产物
-pnpm lint         # ESLint 校验
-pnpm lint:fix     # ESLint 自动修复
+pnpm preview      # 预览构建产物（生产模式下需先设置 JWT_SECRET）
+pnpm test         # Vitest 单测（一次性）
+pnpm test:watch   # Vitest 监听模式
+pnpm lint         # ESLint + Oxlint 校验
+pnpm lint:fix     # 自动修复
 pnpm format       # Prettier 格式化
 pnpm typecheck    # 类型检查（vue-tsc）
 ```
@@ -159,7 +168,7 @@ pnpm typecheck    # 类型检查（vue-tsc）
 
 ## 9. 提交前自检清单
 
-- [ ] `pnpm lint` 与 `pnpm typecheck` 均通过
+- [ ] `pnpm lint`、`pnpm typecheck` 与 `pnpm test` 均通过
 - [ ] 无 `any`、无 `console.log`、无未使用变量
 - [ ] 颜色/间距全部走 token，无魔法值
 - [ ] 请求只出现在 composable 或页面 `useAsyncData`

@@ -71,3 +71,8 @@
 - 公网验证通过：文章列表 API、登录签发 JWT Cookie、点赞切换、首页 SSR 渲染均正常
 - 服务器：阿里云 ECS（2核4G，Alibaba Cloud Linux 3），Docker Compose 部署，SQLite 数据持久化
 - 登录体系：演示账号一键登录 → 真实 JWT HttpOnly Cookie，交互接口（点赞/收藏/评论/发布）需登录
+- **后续变更（2026-11-24 整体审查加固，详见 [整体审查后的补充与优化](./2026-11-24-review-hardening.md)）**：
+  - `JWT_SECRET` 由「compose 内硬编码默认值 + `sed` 替换」改为**强制外部注入**（`${JWT_SECRET:?...}`）；应用侧新增 `server/plugins/jwt-guard.ts`，`NODE_ENV=production` 且缺密钥时**启动即退出**；登录 Cookie 按站点协议条件加 `secure`（HTTPS 站点自动启用）
+  - 数据层 `server/db/index.ts`（原 1644 行）拆为 `schema.ts` + `repositories/` 9 个领域仓储，`index.ts` 保留汇总 re-export，`~~/server/db` 导入路径不变
+  - 新增工程能力：`vitest.config.ts` + `tests/**`（纯函数单测，34 例）与 `.github/workflows/ci.yml`（`lint → typecheck → test → build`）
+  - 文档同步：`docs/deploy.md` / `README.md` 中旧的 `sed` 替换指引已改为写入 `.env` 注入 `JWT_SECRET`

@@ -295,7 +295,7 @@ juejin/
 - **环境已固化**：Node `24.11.0`（`.nvmrc` + `package.json#engines`）；pnpm `10.33.0`（`package.json#packageManager`）。执行任何命令前需先 `nvm use`——Node 20 会让 ESLint 10 因缺少 `Object.groupBy` 直接崩溃。
 - **依赖偏离说明**：`typescript` 固定 `^5.9`（TS 7 超出 vue-tsc / @typescript-eslint 的 peer 范围）；补充 `cssnano` 消除 Nuxt PostCSS 构建告警。
 - **环境事件（需知悉）**：`vite-plus` 于本次自动把 pnpm 由 `10.33.0` 升到 `12.23.0`，触发"store 不一致 → 重建 node_modules"并撞上 pnpm 12 默认的 `minimumReleaseAge`（24h）供应链策略，导致 `node_modules` 一度被清空。已通过 `packageManager: pnpm@10.33.0` 固定版本并用 `pnpm install --frozen-lockfile` 恢复，锁文件未改动。
-- **已知取舍（用户决定）**：暂不安装 `@iconify-json/lucide`，图标在浏览器端向 Iconify 在线 API 拉取（需联网；SSR HTML 中不含图标 SVG）。后续若需离线/首屏图标，再补该 devDependency。
+- **已推翻（2026-11-24 审查加固）**：原「暂不安装 `@iconify-json/lucide`、图标走 Iconify 在线 API」的取舍已作废——已安装 `@iconify-json/lucide`（dev）并把 `@nuxt/icon` 配置为 `mode: 'svg'` + `serverBundle: 'local'`，SSR 首页直出 40 个内联 `<svg>`，不再依赖在线 API。详见 [整体审查后的补充与优化](./2026-11-24-review-hardening.md)。
 - 备注：`agent.md` 采用社区通用大写命名 `AGENTS.md`（macOS 文件系统不区分大小写）。
 - 待办：阶段 5（用户体系）已由用户决定**暂缓**；阶段 6 剩余 6.3 依赖登录同样暂缓；阶段 8 已完成；阶段 9 已完成（9.1 ~ 9.5）；**阶段 10（收尾）10.1 ~ 10.4 已全部完成，计划内全部可执行步骤收尾完毕**。
 - **阶段 7 已完成（7.0 ~ 7.5）**，验证结论：
@@ -355,3 +355,10 @@ juejin/
   - 连带改动：`nuxt.config.ts#sitemap.exclude` 与 `public/robots.txt` 纳入 `/settings`、`/settings/**`、`/pins/publish`
   - 验证（preview:3100）：`pnpm lint` ✅（0 warning / 0 error）· `pnpm typecheck` ✅（exit 0）· `pnpm build` ✅（Client 2.20 MB / gzip 741.73 kB · Nitro 7.57 MB）；接口冒烟（注册→登录→关注→发沸点→改资料→改密码）全 `err_no: 0`；私有页未登录 302 → `/login?redirect=…`，带 Cookie 200 ✅
 - **计划内全部阶段（0 ~ 10）已完成**：阶段 8（搜索/标签/排行/小册）、阶段 9（消息中心/收藏集）、阶段 10（收尾）与本次用户体系收尾均已落地，无遗留待办。
+- **2026-11-24 整体审查加固（已完成，详见 [整体审查后的补充与优化](./2026-11-24-review-hardening.md)）**：
+  - ① 安全：`server/utils/auth.ts` 生产缺 `JWT_SECRET` 直接抛错 + 新增 `server/plugins/jwt-guard.ts`（启动即退出）、`docker-compose.yml`/`docs/deploy.md`/`README.md` 改为**强制注入** `JWT_SECRET`、登录 Cookie 按站点协议条件加 `secure`
+  - ② 重构：`server/db/index.ts`（原 1644 行）拆为 `schema.ts` + `repositories/` 9 个领域仓储，`index.ts` 保留汇总 re-export，`~~/server/db` 导入路径与调用方不变
+  - ③ 图标：安装本地图标集并将 `@nuxt/icon` 配置为 `mode: 'svg'` + `serverBundle: 'local'`（见上「已推翻」条目）
+  - ④ 工程：新增 `vitest.config.ts` + `tests/**`（34 例纯函数单测）与 `.github/workflows/ci.yml`（`lint → typecheck → test → build`）
+  - 验证：`pnpm lint` 0 warning / 0 error（195 files）· `pnpm typecheck` exit 0 · `pnpm test` 34/34 · `pnpm build` 成功 · 无密钥 + `NODE_ENV=production` 启动 exit 1 · 13 个接口冒烟 `err_no: 0` · SSR 首页 40 个内联 SVG
+  - 本次同步更新文档：`README.md`、`AGENTS.md`、`docs/deploy.md`、`docs/plans/*.md`
