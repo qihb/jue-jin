@@ -12,16 +12,16 @@
 
 ## 2. 技术栈基线（禁止随意替换）
 
-| 分类 | 选型 | 版本约束 |
-| --- | --- | --- |
-| 框架 | Nuxt | 4.x（Vue 3.5+ / Nitro 2） |
-| 语言 | TypeScript | strict 模式，禁止裸 `any` |
-| 样式 | Tailwind CSS | v4（`@tailwindcss/vite`），token 走 CSS 变量 |
-| 图标 | @nuxt/icon + Iconify | 按需引入 |
-| 工具库 | @vueuse/nuxt | 优先复用，避免自造轮子 |
-| 状态 | Pinia | `@pinia/nuxt` |
-| 规范 | @nuxt/eslint + Prettier + Oxlint | 提交前必过 |
-| 包管理 | pnpm | 锁定版本，禁用 npm/yarn 生成 lockfile |
+| 分类   | 选型                             | 版本约束                                     |
+| ------ | -------------------------------- | -------------------------------------------- |
+| 框架   | Nuxt                             | 4.x（Vue 3.5+ / Nitro 2）                    |
+| 语言   | TypeScript                       | strict 模式，禁止裸 `any`                    |
+| 样式   | Tailwind CSS                     | v4（`@tailwindcss/vite`），token 走 CSS 变量 |
+| 图标   | @nuxt/icon + Iconify             | 按需引入                                     |
+| 工具库 | @vueuse/nuxt                     | 优先复用，避免自造轮子                       |
+| 状态   | Pinia                            | `@pinia/nuxt`                                |
+| 规范   | @nuxt/eslint + Prettier + Oxlint | 提交前必过                                   |
+| 包管理 | pnpm                             | 锁定版本，禁用 npm/yarn 生成 lockfile        |
 
 > **运行环境**：Node `^22.21.0 || ^24.11.0 || >=26.0.0`（见 `.nvmrc`，当前固定 `24.11.0`）。
 > Node 20 及以下会导致 `eslint` 启动崩溃（缺少 `Object.groupBy`），务必先 `nvm use` 再执行任何命令。
@@ -56,11 +56,13 @@ server ┘
 ## 4. 编码规范
 
 ### 4.1 TypeScript
+
 - 严格模式，禁止 `any`；无法确定类型用 `unknown` 再收窄。
 - 所有业务实体类型统一放 `shared/types/`，按领域拆分文件（`user.ts` / `article.ts` / `pin.ts` …）并在 `index.ts` 汇总导出。
 - 接口请求/响应类型必须显式声明，禁止依赖隐式推断的 `any`。
 
 ### 4.2 命名
+
 - 组件：`PascalCase`，**文件名与组件名一致**；页面路由文件遵循 Nuxt 约定（`[id].vue`）。
 - composable：`use` 开头 + `camelCase`（`useArticleFeed`）。
 - store：`camelCase` + `useXxxStore`（`useUserStore`）。
@@ -68,22 +70,26 @@ server ┘
 - 类型/接口：`PascalCase`，接口不加 `I` 前缀。
 
 ### 4.3 组件
+
 - **组件只负责展示与交互，禁止直连接口**。数据通过 `props` / `composables` 注入。
 - 单文件组件顺序：`<script setup>` → `<template>` → `<style>`（尽量不用 `<style>`）。
 - 可复用组件放 `app/components/` 对应分类目录；**只被单一页面使用的组件**就近放在该页面同级目录或 `pages/**/components/`。
 - props 必须带类型；事件用 `defineEmits` 显式声明。
 
 ### 4.4 样式
+
 - 只使用 Tailwind 原子类 + `@theme` 定义的 token。
 - **禁止魔法色值**（如 `#1e80ff` 直接写进组件）——统一使用语义变量：`--color-jj-primary`、`--color-jj-text-1` 等。
 - 复杂/重复样式用 `@apply` 收敛到组件类或 `base/` 组件，禁止大段复制粘贴 class 串。
 - 响应式以移动端单栏、桌面端双栏（内容区 + 侧栏）为基准断点。
 
 ### 4.5 状态管理
+
 - 仅**跨页面共享**的状态进 Pinia（登录态、主题、草稿）。
 - 页面内局部状态用 `ref` / `reactive`，不得为了"统一"硬塞进 store。
 
 ### 4.6 数据请求
+
 - 所有请求只允许出现在 `composables/` 或页面的 `useAsyncData` / `useFetch` 中。
 - 统一走 `composables/useRequest` 封装，集中处理错误与响应体解包（`{ err_no, err_msg, data }`）。
 - SSR 首屏数据优先用 `useAsyncData`；交互触发用封装后的 `$fetch`。
@@ -94,7 +100,11 @@ server ┘
 
 - 接口统一响应体：
   ```ts
-  interface ApiResp<T> { err_no: number; err_msg: string; data: T }
+  interface ApiResp<T> {
+    err_no: number
+    err_msg: string
+    data: T
+  }
   ```
   （`err_no === 0` 表示成功）
 - 分页统一使用 `limit` + `cursor` 游标分页，返回 `{ list, cursor, hasMore }`。
@@ -116,11 +126,13 @@ server ┘
 ## 7. Do & Don't
 
 **Do**
+
 - 新建功能前先看 `docs/plans/` 是否有对应计划，按阶段推进。
 - 复用 `base/` 组件与 `@vueuse` 能力，避免重复造轮子。
 - 破坏性变更前先更新本文件与计划文档。
 
 **Don't**
+
 - ❌ 组件内直接 `$fetch` / 写死接口地址。
 - ❌ 跨层 import（`app` ⇄ `server`）。
 - ❌ 组件内写魔法色值、魔法断点。

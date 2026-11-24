@@ -1,13 +1,11 @@
-/** 服务端统一响应体：`err_no === 0` 表示成功 */
-export interface ApiResp<T> {
-  err_no: number
-  err_msg: string
-  data: T
-}
+export type { ApiResp, CursorPage, CursorParams, CursorQuery, ID } from './common'
 
-/** 游标分页统一返回结构 */
-export interface CursorPage<T> {
-  list: T[]
-  cursor: string
-  hasMore: boolean
-}
+export type { AuthorRankItem, FollowState, User, UserBrief } from './user'
+
+export type { Category, Tag } from './tag'
+
+export type { ArticleDetail, ArticleFeedQuery, ArticleSummary } from './article'
+
+export type { PinDetail, PinSummary } from './pin'
+
+export type { Comment, CommentListQuery, CommentTargetType } from './comment'
